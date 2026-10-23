@@ -117,21 +117,6 @@ export function spruce() {
   return t;
 }
 
-export function doorPanel() {
-  const [c, g] = make(256, 512); const r = rng(19);
-  g.fillStyle = '#5e3b23'; g.fillRect(0, 0, 256, 512);
-  for (let x = 0; x < 256; x += 2 + r() * 4) {
-    g.strokeStyle = `rgba(30,15,6,${0.05 + r() * 0.12})`; g.lineWidth = 1;
-    g.beginPath(); g.moveTo(x, 0); g.lineTo(x + (r() - 0.5) * 6, 512); g.stroke();
-  }
-  for (const [y, h] of [[34, 200], [262, 214]]) {
-    g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(30, y, 196, h);
-    g.fillStyle = 'rgba(255,220,180,.07)'; g.fillRect(30, y + h - 4, 196, 4); g.fillRect(222, y, 4, h);
-    g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(30, y, 196, 4); g.fillRect(30, y, 4, h);
-  }
-  return toTex(c);
-}
-
 /* ---------- window view: Singapore at night ---------- */
 
 export function skyline() {
@@ -333,20 +318,9 @@ export function laptopScreen() {
   return toTex(c);
 }
 
-export function keyboard() {
-  const [c, g] = make(512, 256);
-  g.fillStyle = '#2a2c30'; g.fillRect(0, 0, 512, 256);
-  g.fillStyle = '#121316';
-  for (let row = 0; row < 5; row++) for (let k = 0; k < 14; k++) {
-    g.beginPath(); g.roundRect(10 + k * 35.5, 10 + row * 38, 31, 33, 4); g.fill();
-  }
-  g.beginPath(); g.roundRect(140, 200, 230, 33, 4); g.fill();
-  return toTex(c);
-}
-
 /* ---------- the Placecom hoodie (1px = 1mm, origin at the neck) ---------- */
 
-export const HOODIE_W = 720, HOODIE_H = 790;
+const HOODIE_W = 720, HOODIE_H = 790;
 const MAROON = '#6a1d2a', CREAM = '#f3efe8';
 
 function fabric(g, r) {

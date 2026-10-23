@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spline to GLB</title>
+  <style>
+    body { font: 14px/1.5 system-ui, sans-serif; background: #0e0c0b; color: #e8e2d8; max-width: 640px; margin: 48px auto; padding: 0 16px; }
+    input { width: 100%; box-sizing: border-box; padding: 8px; font: inherit; background: #1b1816; color: inherit; border: 1px solid #3a342f; border-radius: 6px; }
+    button { margin-top: 12px; padding: 8px 14px; font: inherit; border-radius: 6px; border: 0; background: #b6ff5c; color: #0e0c0b; cursor: pointer; }
+    pre { white-space: pre-wrap; color: #a49a8e; }
+  </style>
+  <!-- Spline's loader needs three r180+ (HDRLoader); the site itself stays on r170. -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+        "@splinetool/loader": "https://cdn.jsdelivr.net/npm/@splinetool/loader@2.0.111/build/SplineLoader.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <h1>Spline → room.glb</h1>
+  <p>Paste the Spline code-export URL, convert, then compress the download into <code>models/room.glb</code> (see the README).</p>
+  <input id="url" value="https://prod.spline.design/pbxt7OpjyHU38IE4/scene.splinecode">
+  <button id="go">Convert and download</button>
+  <pre id="log"></pre>
+  <script type="module">
+    // Bake the Spline scene into a plain glTF: one node per model, in metres, in the model's
+    // own frame, with standard PBR materials and parts sharing a material merged together.
+    import * as THREE from 'three';
+    import SplineLoader from '@splinetool/loader';
+    import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+    import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+    // Spline units per metre, and where each model's origin sits along x in the Spline file.
+    const S = 200;
+    const MODELS = {
+      Guitar: 0, GuitarStand: 400, Easel: 1000, Desk: 2000, Chair: 2600, Laptop: 3200,
+      Rack: 3800, Hoodie: 4400, DoorFrame: 5000, DoorLeaf: 5600, Window: 6400, Lamp: 7200,
+    };
+    // Parts the site drives or retextures by name: never merged away.
+    const KEEP = /^(Guitar (Top|Sides|Back|Binding)|Laptop Screen|Hoodie (Front|Back|Sleeve|Hood|Pocket|Cuff)|Lamp (Bulb|Shade))/;
+    // Parts the site paints a canvas texture onto: the only ones that need UVs.
+    const TEXTURED = /^(Guitar Top|Laptop Screen|Hoodie (Front|Back|Pocket|Sleeve [LR]))$/;
+    // The exported material data has no clearcoat, so it is put back by name.
+    const COAT = [[/^Guitar (Top|Sides|Back|Binding|Pickguard|Neck|Head Face|Dot)/, 0.8], [/^DoorLeaf/, 0.25], [/^Desk (Top|Mug)/, 0.4], [/^Chair/, 0.2], [/^Rack/, 0.4], [/^Easel (Brush Handle|Paint)/, 0.6]];
+
+    const log = (s) => { document.querySelector('#log').textContent += s + '\n'; };
+    const lin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+
+    // Spline's node materials keep colour, alpha, roughness and metalness in the first
+    // uniforms; a phong layer puts a specular colour where roughness would be.
+    function material(src, name) {
+      const m = Array.isArray(src) ? src[0] : src, u = m.uniforms || {};
+      const val = (k) => u[k] && u[k].value;
+      const col = val('nodeU0');
+      // The loader keeps colours as raw sRGB numbers (colour management off).
+      const color = col && col.isColor ? new THREE.Color(lin(col.r), lin(col.g), lin(col.b)) : new THREE.Color(0.25, 0.25, 0.25);
+      const alpha = typeof val('nodeU1') === 'number' ? val('nodeU1') : 1;
+      const phong = !!(val('nodeU2') && val('nodeU2').isColor);
+      const rough = phong ? 0.4 : (typeof val('nodeU2') === 'number' ? val('nodeU2') : 0.5);
+      let metal = phong ? 0 : (typeof val('nodeU3') === 'number' ? val('nodeU3') : 0);
+      if (metal <= 0.2) metal = 0; // Spline's default 0.2 means "not metal"
+      const coat = (COAT.find(([re]) => re.test(name)) || [0, 0])[1];
+      const p = {
+        name: `${color.getHexString()}-${alpha}-${rough}-${metal}-${coat}-${m.side}-${phong}`,
+        color, roughness: rough, metalness: metal, side: m.side === 2 ? THREE.DoubleSide : THREE.FrontSide,
+        transparent: alpha < 1, opacity: alpha, depthWrite: alpha >= 1,
+      };
+      if (phong) { p.emissive = color.clone(); p.emissiveIntensity = 1; }
+      return coat ? new THREE.MeshPhysicalMaterial({ ...p, clearcoat: coat, clearcoatRoughness: 0.25 }) : new THREE.MeshStandardMaterial(p);
+    }
+
+    function bake(src, matrix, uv) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', src.attributes.position.clone());
+      if (src.attributes.normal) g.setAttribute('normal', src.attributes.normal.clone());
+      if (uv && src.attributes.uv) g.setAttribute('uv', src.attributes.uv.clone());
+      if (src.index) g.setIndex(src.index.clone());
+      g.applyMatrix4(matrix);
+      if (!src.attributes.normal) g.computeVertexNormals();
+      return g;
+    }
+
+    function convert(scene) {
+      scene.updateMatrixWorld(true);
+      const out = new THREE.Scene();
+      for (const [name, ax] of Object.entries(MODELS)) {
+        const group = scene.getObjectByName(name);
+        if (!group) { log(`missing: ${name}`); continue; }
+        const toLocal = new THREE.Matrix4().makeScale(1 / S, 1 / S, 1 / S).multiply(new THREE.Matrix4().makeTranslation(-ax, 0, 0));
+        const buckets = new Map(), node = new THREE.Group();
+        node.name = name;
+        group.traverse((o) => {
+          if (!o.isMesh || !o.visible || !o.geometry?.attributes?.position) return;
+          const mat = material(o.material, o.name);
+          const geo = bake(o.geometry, toLocal.clone().multiply(o.matrixWorld), TEXTURED.test(o.name));
+          const key = KEEP.test(o.name) ? 'keep:' + o.name : mat.name + (mat.isMeshPhysicalMaterial ? 'p' : '');
+          if (!buckets.has(key)) buckets.set(key, { mat, geos: [], names: [] });
+          const b = buckets.get(key); b.geos.push(geo); b.names.push(o.name);
+        });
+        for (const [key, b] of buckets) {
+          let geos = b.geos;
+          if (geos.some((g) => !g.index)) geos = geos.map((g) => (g.index ? g.toNonIndexed() : g));
+          const mesh = new THREE.Mesh(geos.length === 1 ? geos[0] : mergeGeometries(geos, false), b.mat);
+          mesh.name = key.startsWith('keep:') ? key.slice(5) : `${name} ${b.names[0].replace(name, '').trim().split(' ')[0] || 'Part'} ${node.children.length}`;
+          node.add(mesh);
+        }
+        const size = new THREE.Box3().setFromObject(node).getSize(new THREE.Vector3());
+        log(`${name}: ${node.children.length} meshes, ${size.toArray().map((v) => v.toFixed(2)).join(' × ')} m`);
+        out.add(node);
+      }
+      return out;
+    }
+
+    document.querySelector('#go').addEventListener('click', async () => {
+      document.querySelector('#log').textContent = '';
+      log('loading…');
+      const scene = await new SplineLoader().loadAsync(document.querySelector('#url').value + '?' + Date.now());
+      const buf = await new GLTFExporter().parseAsync(convert(scene), { binary: true });
+      log(`room.glb: ${(buf.byteLength / 1e6).toFixed(2)} MB before compression`);
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([buf])), download: 'room.glb' });
+      a.click();
+    });
+  </script>
+</body>
+</html>

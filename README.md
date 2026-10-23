@@ -21,7 +21,8 @@ Deploy by pushing to any static host (GitHub Pages works as-is).
 | --- | --- |
 | `js/content.js` | **All the words.** Card copy, detection labels, polaroids, gigs, places. Edit this first. |
 | `js/room.js` | Room layout, lights, polaroid physics, guitar chords |
-| `js/props.js` | The objects, modelled from primitives |
+| `js/props.js` | Loads the models and layers on the moving parts (strings, canvas, screen, hoodie print) |
+| `models/room.glb` | The furniture and objects, modelled in Spline (see below) |
 | `js/textures.js` | Every surface, painted on a canvas at load time (no image files) |
 | `js/vision.js` | Machine view (Sobel edges + optical flow) and the detection boxes |
 | `js/worlds.js` | Behind the doors: the gig crowd and the floating islands |
@@ -36,10 +37,29 @@ Deploy by pushing to any static host (GitHub Pages works as-is).
 - Tap the hoodie twice to turn it around.
 - Press `V` for machine view. The flow arrows are real: every pixel's depth is reprojected through last frame's camera.
 
+## Editing the models
+
+The guitar and its stand, easel set, desk, chair, laptop, coat rack, hoodie, door frame,
+door leaf, window and lamp live in one Spline file. Each is a top-level group, laid out
+along x at 200 Spline units to the metre, and built in the same local frame `props.js` places
+it in. Parts the site retextures or drives (`Guitar Top`, `Laptop Screen`, `Hoodie Front`, …)
+are found by name, so keep those names.
+
+To ship a change:
+
+1. In Spline, update the code export (Export → Code → three.js).
+2. Open `tools/spline-to-glb.html` through the local server, paste the export URL, and convert.
+   It bakes each group into metres with standard PBR materials and downloads `room.glb`.
+3. Compress it into the site:
+
+   ```sh
+   npx gltfpack -i ~/Downloads/room.glb -o models/room.glb -cc -kn -km -kv -vtf
+   ```
+
+   `-kn -km` keep the part names and materials apart, `-kv -vtf` keep plain UVs for the
+   canvas textures.
+
 ## Using real photos
 
 Polaroids use drawn motifs for now. To use a photo, load it with `THREE.TextureLoader`
 in `textures.js#polaroid` and draw it into the 440×440 photo area in place of `MOTIFS[motif]`.
-For the hoodie, guitar and easel, image-to-3D tools (Meshy, Tripo, Rodin) can turn
-photos into `.glb` files; load them with `GLTFLoader` and swap them in for the
-primitive models in `props.js`, keeping the same `register(...)` calls in `room.js`.

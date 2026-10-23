@@ -4,6 +4,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { setAniso } from './textures.js';
+import { loadModels } from './props.js';
 import { buildRoom } from './room.js';
 import { buildGigs, buildPlaces } from './worlds.js';
 import { Rig } from './rig.js';
@@ -15,11 +16,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const touch = matchMedia('(pointer: coarse)').matches;
 
 // Canvas textures are drawn once, so the fonts must be ready first.
+const models = loadModels();
 await Promise.race([
   Promise.all(['600 44px Caveat', 'italic 50px "Instrument Serif"', '400 84px "Instrument Serif"', '700 70px Inter', '500 16px "JetBrains Mono"']
     .map((f) => document.fonts.load(f))).catch(() => {}),
   wait(2500),
 ]);
+await models;
 
 /* ---------- renderer ---------- */
 
