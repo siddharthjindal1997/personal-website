@@ -69,9 +69,10 @@ export function buildRoom(renderer) {
   const back = new THREE.Mesh(wallGeo(-X - WT, X + WT, null, WIN), [wallMat, cutMat]);
   back.position.z = -Z - WT;
   const DOOR_Z = 0.3, DW = 1.1, DH = 2.25;
-  const left = new THREE.Mesh(wallGeo(-Z, Z + WT, [-DOOR_Z - DW / 2, -DOOR_Z + DW / 2, DH]), [wallMat, cutMat]);
+  // Side walls stop at the back wall's inner face; overlapping corners z-fight.
+  const left = new THREE.Mesh(wallGeo(-Z, Z, [-DOOR_Z - DW / 2, -DOOR_Z + DW / 2, DH]), [wallMat, cutMat]);
   left.rotation.y = Math.PI / 2; left.position.x = -X - WT;
-  const right = new THREE.Mesh(wallGeo(-Z - WT, Z, [DOOR_Z - DW / 2, DOOR_Z + DW / 2, DH]), [wallMat, cutMat]);
+  const right = new THREE.Mesh(wallGeo(-Z, Z, [DOOR_Z - DW / 2, DOOR_Z + DW / 2, DH]), [wallMat, cutMat]);
   right.rotation.y = -Math.PI / 2; right.position.x = X + WT;
   for (const w of [back, left, right]) { w.receiveShadow = true; w.castShadow = true; scene.add(w); }
 

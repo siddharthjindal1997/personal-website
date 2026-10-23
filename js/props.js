@@ -373,9 +373,11 @@ export function makeDoor(word, portalStops) {
   const root = new THREE.Group();
   const trim = std(0xefe8dc, { roughness: 0.6 });
   const W = 1.1, H = 2.25;
-  root.add(box(0.08, H + 0.08, 0.06, trim, -W / 2 - 0.04, (H + 0.08) / 2, 0.02));
-  root.add(box(0.08, H + 0.08, 0.06, trim, W / 2 + 0.04, (H + 0.08) / 2, 0.02));
-  root.add(box(W + 0.16, 0.08, 0.06, trim, 0, H + 0.04, 0.02));
+  // Trim lines the opening and sits just inside it, like the window frame.
+  const TD = 0.26, tz = -0.08, ti = 0.01;
+  root.add(box(0.08, H + 0.08, TD, trim, -W / 2 - 0.04 + ti, (H + 0.08) / 2, tz));
+  root.add(box(0.08, H + 0.08, TD, trim, W / 2 + 0.04 - ti, (H + 0.08) / 2, tz));
+  root.add(box(W + 0.16, 0.08, TD, trim, 0, H + 0.04 - ti, tz));
 
   const hinge = new THREE.Group();
   hinge.position.set(-W / 2, 0, 0);
@@ -411,11 +413,13 @@ export function makeDoor(word, portalStops) {
 export function makeWindow(w, h) {
   const g = new THREE.Group();
   const frame = std(0xf1ece4, { roughness: 0.5 });
-  const f = 0.07;
-  g.add(box(w + f * 2, f, 0.12, frame, 0, h / 2 + f / 2, 0));
-  g.add(box(w + f * 2, f, 0.12, frame, 0, -h / 2 - f / 2, 0));
-  g.add(box(f, h, 0.12, frame, -w / 2 - f / 2, 0, 0));
-  g.add(box(f, h, 0.12, frame, w / 2 + f / 2, 0, 0));
+  // The frame lines the whole wall opening and sits slightly inside it, so its faces
+  // never share a plane with the hole's edges (shared planes z-fight and flicker).
+  const f = 0.07, inset = 0.015, D = 0.26, z = -0.09;
+  g.add(box(w + f * 2, f, D, frame, 0, h / 2 + f / 2 - inset, z));
+  g.add(box(w + f * 2, f, D, frame, 0, -h / 2 - f / 2 + inset, z));
+  g.add(box(f, h, D, frame, -w / 2 - f / 2 + inset, 0, z));
+  g.add(box(f, h, D, frame, w / 2 + f / 2 - inset, 0, z));
   g.add(box(0.035, h, 0.05, frame, 0, 0, 0));
   g.add(box(w, 0.035, 0.05, frame, 0, h * 0.12, 0));
   g.add(box(w + 0.3, 0.04, 0.22, frame, 0, -h / 2 - f - 0.01, 0.08));
