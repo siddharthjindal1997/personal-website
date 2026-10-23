@@ -1,7 +1,8 @@
 // Outside the room: cartoon space, a portal, odd planets, and cats.
+// The cats, their helmets and the portal's frame are Spline models (see props.js).
 import * as THREE from 'three';
 import { rng, toTex } from './textures.js';
-import { std } from './props.js';
+import { std, makeCat, makeHelmet, makePortalFrame } from './props.js';
 import { meow } from './audio.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -144,43 +145,15 @@ function lumpy(radius, color, seed) {
 
 /* ---------- cats ---------- */
 
+// Six real coats: ginger tabby, black, calico, grey tabby, seal-point, white.
 const COATS = [
-  { body: 0xe0873a, head: 0xe0873a, bits: 0xf3e3cc },
-  { body: 0x232326, head: 0x232326, bits: 0x232326 },
-  { body: 0xf2efe9, head: 0xe0873a, bits: 0x2a2a2e },
-  { body: 0x8c919c, head: 0x8c919c, bits: 0xe9e4dc },
-  { body: 0xe8d2a8, head: 0xe8d2a8, bits: 0x6b4a33 },
-  { body: 0xf2efe9, head: 0xf2efe9, bits: 0xf2efe9 },
+  { base: '#c9783a', belly: '#efd3ab', stripe: '#8e4a1c', limbs: 0xc27436, ears: 0xb86b31, eye: 0xc9a227 },
+  { base: '#1d1c1f', limbs: 0x1d1c1f, ears: 0x1a191c, eye: 0xd4b42a },
+  { base: '#f1ece4', belly: '#f6f2ec', patches: [['#c9783a', 5], ['#2a2726', 4]], limbs: 0xf1ece4, ears: 0xc9783a, eye: 0x8fb04a },
+  { base: '#8f949c', belly: '#d9d6d0', stripe: '#5c616a', limbs: 0x8a8f98, ears: 0x7c818a, eye: 0xd7b33a },
+  { base: '#e6d6bb', belly: '#f2e8d8', point: '#4a3428', limbs: 0x4a3428, ears: 0x3e2b21, eye: 0x4f8fd6 },
+  { base: '#f3f0ea', limbs: 0xf3f0ea, ears: 0xeee7de, eye: 0x7fb0d8 },
 ];
-
-function makeCat(coat, helmet) {
-  const cat = new THREE.Group();
-  const fur = std(coat.body, { roughness: 0.9 }), headFur = std(coat.head, { roughness: 0.9 }), bits = std(coat.bits, { roughness: 0.9 });
-  const add = (geo, mat, x, y, z, sx = 1, sy = 1, sz = 1) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.scale.set(sx, sy, sz); cat.add(m); return m; };
-  add(new THREE.SphereGeometry(0.2, 18, 14), fur, 0, 0, 0, 1, 0.85, 1.7);
-  add(new THREE.SphereGeometry(0.16, 18, 14), headFur, 0, 0.12, 0.38);
-  add(new THREE.SphereGeometry(0.075, 12, 10), std(0xf6efe6, { roughness: 0.9 }), 0, 0.07, 0.5, 1.15, 0.8, 0.9);
-  add(new THREE.SphereGeometry(0.018, 8, 6), std(0xe58aa0), 0, 0.105, 0.57);
-  for (const s of [-1, 1]) {
-    const ear = add(new THREE.ConeGeometry(0.06, 0.12, 4), bits, s * 0.085, 0.27, 0.36);
-    ear.rotation.z = -s * 0.3;
-    const eye = add(new THREE.SphereGeometry(0.03, 10, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 2.2, 0.5), toneMapped: false }), s * 0.062, 0.16, 0.5);
-    eye.scale.set(1, 1.25, 0.6);
-  }
-  const leg = new THREE.CapsuleGeometry(0.045, 0.16, 4, 8);
-  for (const [x, z, rx] of [[-0.1, 0.2, -1.1], [0.1, 0.2, -1.1], [-0.1, -0.2, 1.1], [0.1, -0.2, 1.1]]) {
-    const l = add(leg, fur, x, -0.13, z);
-    l.rotation.x = rx; l.position.z += Math.sign(z) * 0.06;
-  }
-  const tail = new THREE.CatmullRomCurve3([V(0, 0.04, -0.3), V(0, 0.16, -0.48), V(0.07, 0.34, -0.56), V(0.16, 0.46, -0.46)]);
-  add(new THREE.TubeGeometry(tail, 20, 0.034, 8), bits === fur ? fur : bits, 0, 0, 0);
-  if (helmet) {
-    add(new THREE.SphereGeometry(0.25, 24, 18), new THREE.MeshStandardMaterial({ color: 0xbfe6ff, transparent: true, opacity: 0.22, roughness: 0.05, metalness: 0.1, depthWrite: false }), 0, 0.14, 0.4);
-    const collar = add(new THREE.TorusGeometry(0.2, 0.025, 8, 28), std(0xd8dde4, { metalness: 0.7, roughness: 0.3 }), 0, 0.02, 0.3);
-    collar.rotation.x = 1.2;
-  }
-  return cat;
-}
 
 export function buildSpace(scene, renderer) {
   const sky = new THREE.Mesh(new THREE.SphereGeometry(160, 48, 24), new THREE.MeshBasicMaterial({ map: nebula(), side: THREE.BackSide, depthWrite: false }));
@@ -188,7 +161,9 @@ export function buildSpace(scene, renderer) {
   const starfield = stars(renderer);
   scene.add(starfield);
 
-  const gate = portal();
+  const swirl = portal();
+  const gate = new THREE.Group();
+  gate.add(swirl, makePortalFrame());
   scene.add(gate);
 
   const ringed = lumpy(5, 0xe48a5e, 3);
@@ -207,8 +182,9 @@ export function buildSpace(scene, renderer) {
   const cats = [];
   const pickables = [];
   for (let i = 0; i < 11; i++) {
-    const m = makeCat(COATS[i % COATS.length], i === 2 || i === 7);
-    m.scale.setScalar(1.3 + (i % 3) * 0.25);
+    const m = makeCat(COATS[i % COATS.length], i * 13 + 1);
+    if (i === 2 || i === 7) m.add(makeHelmet());
+    m.scale.setScalar((1.3 + (i % 3) * 0.25) * 0.85);
     m.traverse((o) => { if (o.isMesh) { o.userData.cat = i; pickables.push(o); } });
     scene.add(m);
     cats.push({
@@ -239,8 +215,8 @@ export function buildSpace(scene, renderer) {
       c.vel.addScaledVector(out, 7).add(V(0, 4, 0));
     },
     update(dt, t) {
-      gate.material.uniforms.uTime.value = t;
-      gate.rotation.z += dt * 0.05;
+      swirl.material.uniforms.uTime.value = t;
+      swirl.rotation.z += dt * 0.05;
       starfield.material.uniforms.uTime.value = t;
       ringed.rotation.y += dt * 0.03; giant.rotation.y += dt * 0.02; moon.rotation.y += dt * 0.05;
       face.position.y = faceY + Math.sin(t * 0.4) * 0.5;

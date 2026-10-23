@@ -41,11 +41,14 @@
     const MODELS = {
       Guitar: 0, GuitarStand: 400, Easel: 1000, Desk: 2000, Chair: 2600, Laptop: 3200,
       Rack: 3800, Hoodie: 4400, DoorFrame: 5000, DoorLeaf: 5600, Window: 6400, Lamp: 7200,
+      Room: 9000, Cat: 10500, CatHelmet: 11000, Portal: 12000,
     };
-    // Parts the site drives or retextures by name: never merged away.
-    const KEEP = /^(Guitar (Top|Sides|Back|Binding)|Laptop Screen|Hoodie (Front|Back|Sleeve|Hood|Pocket|Cuff)|Lamp (Bulb|Shade))/;
+    // Parts the site drives, recolours or retextures by name: never merged away.
+    const KEEP = /^(Guitar (Top|Sides|Back|Binding)|Laptop Screen|Hoodie (Front|Back|Sleeve|Hood|Pocket|Cuff)|Lamp (Bulb|Shade)|Room (Floor [A-D]|Rug)|Cat (Body|Ear Inner|Eye))/;
+    // Parts merged under one name the site looks up.
+    const JOIN = [[/^Room Wall/, 'Room Walls'], [/^Cat (Legs|Paw|Tail)/, 'Cat Limbs'], [/^Cat Ear [LR]$/, 'Cat Ears'], [/^Cat (Muzzle|Chin)/, 'Cat Muzzle']];
     // Parts the site paints a canvas texture onto: the only ones that need UVs.
-    const TEXTURED = /^(Guitar Top|Laptop Screen|Hoodie (Front|Back|Pocket|Sleeve [LR]))$/;
+    const TEXTURED = /^(Guitar Top|Laptop Screen|Hoodie (Front|Back|Pocket|Sleeve [LR])|Room (Floor [A-D]|Rug)|Cat Body)$/;
     // The exported material data has no clearcoat, so it is put back by name.
     const COAT = [[/^Guitar (Top|Sides|Back|Binding|Pickguard|Neck|Head Face|Dot)/, 0.8], [/^DoorLeaf/, 0.25], [/^Desk (Top|Mug)/, 0.4], [/^Chair/, 0.2], [/^Rack/, 0.4], [/^Easel (Brush Handle|Paint)/, 0.6]];
 
@@ -99,7 +102,8 @@
           if (!o.isMesh || !o.visible || !o.geometry?.attributes?.position) return;
           const mat = material(o.material, o.name);
           const geo = bake(o.geometry, toLocal.clone().multiply(o.matrixWorld), TEXTURED.test(o.name));
-          const key = KEEP.test(o.name) ? 'keep:' + o.name : mat.name + (mat.isMeshPhysicalMaterial ? 'p' : '');
+          const joined = JOIN.find(([re]) => re.test(o.name));
+          const key = joined ? 'keep:' + joined[1] : KEEP.test(o.name) ? 'keep:' + o.name : mat.name + (mat.isMeshPhysicalMaterial ? 'p' : '');
           if (!buckets.has(key)) buckets.set(key, { mat, geos: [], names: [] });
           const b = buckets.get(key); b.geos.push(geo); b.names.push(o.name);
         });

@@ -7,21 +7,7 @@ import { ITEMS, POLAROIDS } from './content.js';
 import { pluck } from './audio.js';
 import { buildSpace } from './space.js';
 
-const X = 4.4, Z = 2.9, H = 3.4, WT = 0.2;
-
-// Wall outline in its own (u, y) plane, with an optional door notch and window hole.
-function wallGeo(u0, u1, door, win) {
-  const s = new THREE.Shape();
-  s.moveTo(u0, 0);
-  if (door) { s.lineTo(door[0], 0); s.lineTo(door[0], door[2]); s.lineTo(door[1], door[2]); s.lineTo(door[1], 0); }
-  s.lineTo(u1, 0); s.lineTo(u1, H); s.lineTo(u0, H); s.lineTo(u0, 0);
-  if (win) {
-    const [cx, cy, w, h] = win, p = new THREE.Path();
-    p.moveTo(cx - w / 2, cy - h / 2); p.lineTo(cx - w / 2, cy + h / 2); p.lineTo(cx + w / 2, cy + h / 2); p.lineTo(cx + w / 2, cy - h / 2); p.lineTo(cx - w / 2, cy - h / 2);
-    s.holes.push(p);
-  }
-  return new THREE.ExtrudeGeometry(s, { depth: WT, bevelEnabled: false });
-}
+const X = 4.4, Z = 2.9;
 
 // Chords for a bonfire guitarist. null = muted string.
 const CHORDS = [
@@ -55,39 +41,12 @@ export function buildRoom(renderer) {
   moon.position.set(0.8, 2.2, -4.5); moon.target.position.set(0.6, 0, -1);
   scene.add(moon, moon.target);
 
-  /* shell */
-  const plaster = T.plaster();
-  const wallMat = new THREE.MeshStandardMaterial({ map: plaster, roughness: 0.92 });
-  const cutMat = new THREE.MeshStandardMaterial({ color: 0x2b2420, roughness: 0.9 });
-  const floorMat = new THREE.MeshStandardMaterial({ map: T.woodFloor(), roughness: 0.55 });
-  const floor = new THREE.Mesh(new THREE.BoxGeometry(2 * X + 2 * WT, 0.25, 2 * Z + WT), [cutMat, cutMat, floorMat, cutMat, cutMat, cutMat]);
-  floor.position.set(0, -0.125, -WT / 2);
-  floor.receiveShadow = true;
-  scene.add(floor);
-
+  /* shell: plank floor, walls with door and window openings, mouldings, rug (all modelled in Spline) */
+  const shell = P.shade(P.makeRoom());
+  shell.getObjectByName('Room_Rug').traverse((m) => { m.castShadow = false; });
+  scene.add(shell);
   const WIN = [0.7, 2.0, 1.9, 1.4];
-  const back = new THREE.Mesh(wallGeo(-X - WT, X + WT, null, WIN), [wallMat, cutMat]);
-  back.position.z = -Z - WT;
-  const DOOR_Z = 0.3, DW = 1.1, DH = 2.25;
-  // Side walls stop at the back wall's inner face; overlapping corners z-fight.
-  const left = new THREE.Mesh(wallGeo(-Z, Z, [-DOOR_Z - DW / 2, -DOOR_Z + DW / 2, DH]), [wallMat, cutMat]);
-  left.rotation.y = Math.PI / 2; left.position.x = -X - WT;
-  const right = new THREE.Mesh(wallGeo(-Z, Z, [DOOR_Z - DW / 2, DOOR_Z + DW / 2, DH]), [wallMat, cutMat]);
-  right.rotation.y = -Math.PI / 2; right.position.x = X + WT;
-  for (const w of [back, left, right]) { w.receiveShadow = true; w.castShadow = true; scene.add(w); }
-
-  const trim = P.std(0xe6ddcf, { roughness: 0.6 });
-  const board = (w, x, z, ry) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, 0.1, 0.025), trim); b.position.set(x, 0.05, z); b.rotation.y = ry; b.receiveShadow = true; scene.add(b); };
-  board(2 * X, 0, -Z + 0.0125, 0);
-  const zs = [[-Z, DOOR_Z - DW / 2 - 0.08], [DOOR_Z + DW / 2 + 0.08, Z]];
-  for (const [a, b] of zs) {
-    board(b - a, -X + 0.0125, (a + b) / 2, Math.PI / 2);
-    board(b - a, X - 0.0125, (a + b) / 2, Math.PI / 2);
-  }
-
-  const rug = new THREE.Mesh(new THREE.CircleGeometry(1.5, 72), new THREE.MeshStandardMaterial({ map: T.rug(), roughness: 1 }));
-  rug.rotation.x = -Math.PI / 2; rug.position.set(0.2, 0.004, 0.8); rug.receiveShadow = true;
-  scene.add(rug);
+  const DOOR_Z = 0.3;
 
   /* things */
   const items = {};

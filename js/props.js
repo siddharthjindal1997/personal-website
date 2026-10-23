@@ -47,6 +47,51 @@ function dress(root, name, mat) {
   return mat;
 }
 
+// UVs in metres, projected along whichever axis each face looks down (walls tile plaster this way).
+// Positions in the GLB are quantised; `matrix` is the node transform that turns them back into metres.
+function boxUV(geo, matrix) {
+  const p = geo.attributes.position, n = geo.attributes.normal, uv = new Float32Array(p.count * 2), v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i).applyMatrix4(matrix);
+    const ax = Math.abs(n.getX(i)), ay = Math.abs(n.getY(i)), az = Math.abs(n.getZ(i));
+    const [a, b] = ax >= ay && ax >= az ? [v.z, v.y] : az >= ay ? [v.x, v.y] : [v.x, v.z];
+    uv[i * 2] = a; uv[i * 2 + 1] = b;
+  }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+}
+
+/* ---------- the room shell: plank floor, walls, mouldings, rug ---------- */
+
+export function makeRoom() {
+  const g = model('Room');
+  const walls = g.getObjectByName('Room_Walls');
+  walls.traverse((m) => { if (m.isMesh) { m.geometry = m.geometry.clone(); m.updateMatrix(); boxUV(m.geometry, m.matrix); } });
+  dress(g, 'Room Walls', new THREE.MeshStandardMaterial({ map: T.plaster(), roughness: 0.92 }));
+  // each plank tone keeps its colour; the grain multiplies over it
+  const oak = T.oakGrain();
+  for (const k of 'ABCD') g.getObjectByName('Room_Floor_' + k).traverse((m) => { if (m.isMesh) { m.material = m.material.clone(); m.material.color.offsetHSL(0, 0, 0.06); m.material.map = oak; } });
+  dress(g, 'Room Rug', new THREE.MeshStandardMaterial({ map: T.rug(), roughness: 1 }));
+  return g;
+}
+
+/* ---------- cats in space ---------- */
+
+export function makeCat(coat, seed) {
+  const cat = model('Cat');
+  dress(cat, 'Cat Body', std(0xffffff, { map: T.catCoat({ ...coat, seed }), roughness: 0.9, side: THREE.DoubleSide }));
+  dress(cat, 'Cat Limbs', std(coat.limbs, { roughness: 0.9 }));
+  dress(cat, 'Cat Ears', std(coat.ears, { roughness: 0.9 }));
+  // a little self-light so the eyes still catch in deep space
+  const eye = new THREE.MeshPhysicalMaterial({ color: coat.eye, emissive: coat.eye, emissiveIntensity: 0.35, roughness: 0.08, clearcoat: 1 });
+  for (const n of ['Cat Eye L', 'Cat Eye R']) dress(cat, n, eye);
+  return cat;
+}
+
+export const makeHelmet = () => model('CatHelmet');
+
+// The stargate frame, in units of the swirl it surrounds (the swirl's edge sits at r = 0.4).
+export const makePortalFrame = () => model('Portal');
+
 /* ---------- Yamaha F310 ---------- */
 
 export function makeGuitar() {

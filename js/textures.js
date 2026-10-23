@@ -48,30 +48,23 @@ function grain(g, w, h, amt, r) {
 
 /* ---------- room surfaces ---------- */
 
-export function woodFloor() {
-  const [c, g] = make(1024, 1024); const r = rng(7);
-  const rows = 8, rh = 1024 / rows;
-  for (let i = 0; i < rows; i++) {
-    let x = -r() * 500;
-    while (x < 1024) {
-      const len = 320 + r() * 420;
-      const hue = 26 + r() * 5, sat = 26 + r() * 10, l = 44 + r() * 7;
-      g.fillStyle = `hsl(${hue},${sat}%,${l}%)`;
-      g.fillRect(x, i * rh, len, rh);
-      for (let k = 0; k < 22; k++) {
-        const y = i * rh + r() * rh;
-        g.strokeStyle = `hsla(${hue - 4},${sat + 10}%,${l - 20}%,${0.06 + r() * 0.12})`;
-        g.lineWidth = 0.6 + r() * 1.6;
-        g.beginPath(); g.moveTo(x, y);
-        for (let s = 0; s <= len; s += 32) g.lineTo(x + s, y + Math.sin(s * 0.012 + k) * (1.5 + r() * 3));
-        g.stroke();
-      }
-      g.fillStyle = 'rgba(38,22,10,.5)'; g.fillRect(x, i * rh, 2, rh);
-      x += len;
-    }
-    g.fillStyle = 'rgba(38,22,10,.55)'; g.fillRect(0, i * rh, 1024, 2);
+// Grain for the floor planks: light, so each plank's own tone shows through.
+export function oakGrain() {
+  const [c, g] = make(1024, 256); const r = rng(7);
+  g.fillStyle = '#f4ece0'; g.fillRect(0, 0, 1024, 256);
+  for (let k = 0; k < 90; k++) {
+    const y = r() * 256, a = 0.05 + r() * 0.14, w = 0.6 + r() * 2.2, f = 0.004 + r() * 0.01, ph = r() * 9;
+    g.strokeStyle = `rgba(92,52,22,${a})`; g.lineWidth = w;
+    g.beginPath();
+    for (let x = 0; x <= 1024; x += 16) g.lineTo(x, y + Math.sin(x * f + ph) * (2 + r() * 1.5));
+    g.stroke();
   }
-  return toTex(c, { repeat: [4, 5] });
+  for (let k = 0; k < 6; k++) {
+    g.fillStyle = 'rgba(80,44,18,.12)';
+    g.beginPath(); g.ellipse(r() * 1024, r() * 256, 10 + r() * 14, 3 + r() * 3, 0, 0, TAU); g.fill();
+  }
+  grain(g, 1024, 256, 10, r);
+  return toTex(c, { repeat: [1, 1] });
 }
 
 export function plaster() {
@@ -562,5 +555,55 @@ export function label(name, years) {
   g.textAlign = 'center'; g.shadowColor = 'rgba(40,20,40,.5)'; g.shadowBlur = 16;
   g.fillStyle = '#fffaf2'; g.font = `400 84px ${SERIF}`; g.fillText(name, 256, 96);
   g.fillStyle = '#ffe2c8'; g.font = `500 26px ${MONO}`; g.fillText(years, 256, 146);
+  return toTex(c);
+}
+
+/* ---------- cat coats ---------- */
+
+// Laid out on the cat's body: u runs round the body (0.25 = spine, 0.75 = belly),
+// v runs from the rump (0) to the nose (1).
+export function catCoat({ base, belly, stripe, point, patches = [], seed = 1 }) {
+  const W = 512, H = 512; const [c, g] = make(W, H); const r = rng(seed);
+  const Y = (v) => (1 - v) * H;
+  g.fillStyle = base; g.fillRect(0, 0, W, H);
+  if (belly) {
+    const gr = g.createLinearGradient(0.5 * W, 0, W, 0);
+    gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.3, belly); gr.addColorStop(0.7, belly); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.fillRect(0.5 * W, Y(0.86), 0.5 * W, Y(0.04) - Y(0.86));
+    // white chin and chest
+    g.fillRect(0.6 * W, Y(0.98), 0.3 * W, Y(0.62) - Y(0.98));
+  }
+  for (const [col, n] of patches) {
+    g.fillStyle = col;
+    for (let i = 0; i < n; i++) {
+      const x = r() * W * 0.55, y = Y(0.05 + r() * 0.9), rx = 30 + r() * 70, ry = 25 + r() * 60;
+      g.beginPath(); g.ellipse(x, y, rx, ry, r() * 3, 0, TAU); g.fill();
+    }
+  }
+  if (stripe) {
+    // mackerel tabby: wavy bands across the back, fading down the flanks
+    g.strokeStyle = stripe; g.lineCap = 'round';
+    for (let v = 0.05; v < 0.78; v += 0.05 + r() * 0.025) {
+      g.lineWidth = 12 + r() * 9;
+      g.beginPath();
+      for (let u = 0.02; u <= 0.48; u += 0.02) {
+        const y = Y(v + Math.sin(u * 14 + v * 9) * 0.008 + (u - 0.25) * (u - 0.25) * 0.3);
+        g.globalAlpha = 0.9 * Math.max(0, 1 - Math.abs(u - 0.25) / 0.27);
+        g.lineTo(u * W, y);
+      }
+      g.stroke();
+    }
+    // the "M" lines on the forehead
+    g.globalAlpha = 0.7; g.lineWidth = 5;
+    for (const du of [-0.03, 0, 0.03]) { g.beginPath(); g.moveTo((0.25 + du) * W, Y(0.86)); g.lineTo((0.25 + du * 1.4) * W, Y(0.93)); g.stroke(); }
+    g.globalAlpha = 1;
+  }
+  if (point) {
+    // colour-point: mask darkens towards the nose
+    const gr = g.createLinearGradient(0, Y(0.8), 0, Y(1));
+    gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, point); gr.addColorStop(1, point);
+    g.fillStyle = gr; g.fillRect(0, 0, W, Y(0.8));
+  }
+  grain(g, W, H, 22, r);
   return toTex(c);
 }

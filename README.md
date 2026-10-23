@@ -40,7 +40,9 @@ Deploy by pushing to any static host (GitHub Pages works as-is).
 ## Editing the models
 
 The guitar and its stand, easel set, desk, chair, laptop, coat rack, hoodie, door frame,
-door leaf, window and lamp live in one Spline file. Each is a top-level group, laid out
+door leaf, window, lamp, the room shell (plank floor, walls, mouldings, rug), the cat, its
+space helmet and the portal's frame live in one Spline file. The cat is one model; each of
+the six coats is a canvas texture (`textures.js#catCoat`) painted onto its body. Each is a top-level group, laid out
 along x at 200 Spline units to the metre, and built in the same local frame `props.js` places
 it in. Parts the site retextures or drives (`Guitar Top`, `Laptop Screen`, `Hoodie Front`, …)
 are found by name, so keep those names.
