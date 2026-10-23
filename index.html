@@ -1,44 +1,59 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coming Soon</title>
-    <style>
-        body, html {
-            height: 100%;
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f4f9;
-            color: #333;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-        .container {
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            max-width: 600px;
-            width: 90%;
-        }
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }
-        p {
-            font-size: 1.2rem;
-            color: #7f8c8d;
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Siddharth Jindal</title>
+  <meta name="description" content="Engineer who paints. Tech lead at maps.gov.sg. Walk around my room.">
+  <meta name="theme-color" content="#0e0c0b">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e0c0b'/%3E%3Cpath d='M7 11V7h4M21 7h4v4M25 21v4h-4M11 25H7v-4' stroke='%23b6ff5c' stroke-width='2.4' fill='none'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
 </head>
 <body>
-    <div class="container">
-        <h1>Coming Soon</h1>
-        <p>Something awesome is in the works. Stay tuned!</p>
-    </div>
+  <canvas id="gl" aria-label="A 3D room with my guitar, an easel, a laptop, a hoodie and two doors"></canvas>
+  <canvas id="hud" aria-hidden="true"></canvas>
+
+  <header class="id">
+    <h1>Siddharth Jindal</h1>
+    <p>Engineer who paints. Tech lead, maps.gov.sg.</p>
+  </header>
+
+  <div class="tools">
+    <button id="vision" class="chip" aria-pressed="false" title="See the room like a machine (V)">
+      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+      <span>machine view</span>
+    </button>
+  </div>
+  <p id="vhud" class="vhud">sobel edges · dense optical flow · <b>0</b> detections</p>
+
+  <button id="back" class="chip back" hidden>← room</button>
+
+  <aside id="card" class="card" aria-live="polite">
+    <div class="kicker"></div>
+    <h2></h2>
+    <div class="body"></div>
+    <div class="links"></div>
+    <p class="hint"></p>
+  </aside>
+
+  <p id="hint" class="hint-bar"></p>
+  <div id="fade"></div>
+  <div id="boot"><span>calibrating camera…</span></div>
+
+  <noscript>
+    <div class="nojs">Siddharth Jindal. Engineer who paints. Tech lead at maps.gov.sg, Open Government Products, Singapore. This site is a 3D room and needs JavaScript.</div>
+  </noscript>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
