@@ -69,9 +69,61 @@ export const ITEMS = {
       'Investing. I followed Runway, 20VC and 1littlecoder before they had 10k followers. Spotting things early is the part I already have.',
     ],
   },
+  tv: { label: 'tv', conf: 0.98, tv: true },
   gigs: { label: 'door', conf: 0.99, door: true },
   places: { label: 'door', conf: 0.99, door: true },
 };
+
+// On the TV in the sofa corner, played in this order. Each note floats beside the screen.
+// Add a show by adding an entry; `art` picks the scene the TV paints (tv.js#ART), and
+// `feels` are what the episode brings up, scored like the room's detections.
+export const SHOWS = [
+  {
+    name: 'BoJack Horseman',
+    episodes: [
+      {
+        se: 'S3 · E4', title: 'Fish Out of Water', art: 'underwater',
+        feels: [['being the foreigner', 0.94], ['quiet', 0.9]],
+        body: [
+          'Twenty minutes with almost no words. BoJack is underwater in a city whose language he cannot speak, trying to do one kind thing and fumbling it.',
+          'It lands differently since I moved countries. The best moments in a new place, and the loneliest ones, both happen without words.',
+        ],
+      },
+      {
+        se: 'S4 · E11', title: 'Time\'s Arrow', art: 'memory',
+        feels: [['memory', 0.92], ['where hurt comes from', 0.89]],
+        body: [
+          'Told from inside his mother\'s dementia: faces scribbled out, rooms rearranging, a whole life folding into its worst afternoons.',
+          'It does not excuse anyone. It shows that the people who hurt us were usually handed the hurt first.',
+        ],
+      },
+      {
+        se: 'S5 · E6', title: 'Free Churro', art: 'eulogy',
+        feels: [['things left unsaid', 0.96], ['grief', 0.91]],
+        body: [
+          'One horse, one lectern, one long monologue at his mother\'s funeral, for a person he never really got to know.',
+          'A whole episode about the conversation you meant to have and now cannot. It is why I try to say the thing now, not later.',
+        ],
+      },
+      {
+        se: 'S6 · E15', title: 'The View from Halfway Down', art: 'dinner',
+        feels: [['the people we lose', 0.95], ['regret', 0.9]],
+        body: [
+          'A dinner party where everyone at the table is already gone. One by one they take the stage for him, while the door at the end of the hall gets closer.',
+          'It is about how clear everything looks once it is too late to act on it. I think of it whenever I am putting something off.',
+        ],
+      },
+      {
+        se: 'S6 · E16', title: 'Nice While It Lasted', art: 'rooftop',
+        feels: [['people who were there for a while', 0.97], ['letting go', 0.9]],
+        body: [
+          'BoJack and Diane on a rooftop at a wedding, talking like two old friends who both know this is the last time. "Mr. Blue" plays underneath.',
+          'Some people are in your life for a chapter, not the whole book, and that is allowed. I think of every city and team I have left, and how much of them I still carry.',
+        ],
+      },
+    ],
+  },
+];
 
 // Lying on the rug. Swap `motif` for a real photo later (see README).
 export const POLAROIDS = [

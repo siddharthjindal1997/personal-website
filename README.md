@@ -2,7 +2,8 @@
 
 A BumpTop-style 3D room you look down into. Everything in it is from my life:
 the Yamaha F310, a half-finished painting, the laptop running maps.gov.sg, the
-Placecom hoodie, polaroids on the rug, and two doors that open onto the outside.
+Placecom hoodie, polaroids on the rug, a sofa in front of my favourite TV episodes, and two
+doors that open onto the outside.
 
 Plain static files: Three.js comes from a CDN through an import map, so there is no build step.
 
@@ -19,12 +20,13 @@ Deploy by pushing to any static host (GitHub Pages works as-is).
 
 | File | What it does |
 | --- | --- |
-| `js/content.js` | **All the words.** Card copy, detection labels, polaroids, gigs, places. Edit this first. |
+| `js/content.js` | **All the words.** Card copy, detection labels, polaroids, TV episodes, gigs, places. Edit this first. |
 | `js/room.js` | Room layout, lights, polaroid physics, guitar chords |
 | `js/props.js` | Loads the models and layers on the moving parts (strings, canvas, screen, hoodie print) |
 | `models/room.glb` | The furniture and objects, modelled in Spline (see below) |
 | `js/textures.js` | Every surface, painted on a canvas at load time (no image files) |
 | `js/vision.js` | Machine view (Sobel edges + optical flow) and the detection boxes |
+| `js/tv.js` | The sofa corner's TV: each episode painted on the screen, and the AR note floating beside it |
 | `js/worlds.js` | Behind the doors: the gig crowd and the floating islands |
 | `js/rig.js` | The eased orbit camera |
 | `js/audio.js` | Karplus–Strong plucked strings for the guitar |
@@ -35,16 +37,18 @@ Deploy by pushing to any static host (GitHub Pages works as-is).
 - Drag across the easel canvas to finish the painting. The bare half is a real Sobel edge map of the painted half.
 - Flick the polaroids around.
 - Tap the hoodie twice to turn it around.
+- Sit on the sofa. The TV plays my favourite episodes, each with a note pinned beside it; tap the TV (or use ← →) for the next one. Add episodes, or a whole show, in `content.js#SHOWS`.
 - Press `V` for machine view. The flow arrows are real: every pixel's depth is reprojected through last frame's camera.
 
 ## Editing the models
 
 The guitar and its stand, easel set, desk, chair, laptop, coat rack, hoodie, door frame,
 door leaf, window, lamp, the room shell (plank floor, walls, mouldings, rug), the cat, its
-space helmet and the portal's frame live in one Spline file. The cat is one model; each of
+space helmet, the portal's frame, and the sofa corner (sofa, side table, wall TV, media console)
+live in one Spline file. The cat is one model; each of
 the six coats is a canvas texture (`textures.js#catCoat`) painted onto its body. Each is a top-level group, laid out
 along x at 200 Spline units to the metre, and built in the same local frame `props.js` places
-it in. Parts the site retextures or drives (`Guitar Top`, `Laptop Screen`, `Hoodie Front`, …)
+it in. Parts the site retextures or drives (`Guitar Top`, `Laptop Screen`, `Hoodie Front`, `TV Screen`, …)
 are found by name, so keep those names.
 
 To ship a change:

@@ -42,13 +42,14 @@
       Guitar: 0, GuitarStand: 400, Easel: 1000, Desk: 2000, Chair: 2600, Laptop: 3200,
       Rack: 3800, Hoodie: 4400, DoorFrame: 5000, DoorLeaf: 5600, Window: 6400, Lamp: 7200,
       Room: 9000, Cat: 10500, CatHelmet: 11000, Portal: 12000,
+      Sofa: 13000, TV: 13800, Console: 14600, SideTable: 15300,
     };
     // Parts the site drives, recolours or retextures by name: never merged away.
-    const KEEP = /^(Guitar (Top|Sides|Back|Binding)|Laptop Screen|Hoodie (Front|Back|Sleeve|Hood|Pocket|Cuff)|Lamp (Bulb|Shade)|Room (Floor [A-D]|Rug)|Cat (Body|Ear Inner|Eye))/;
+    const KEEP = /^(Guitar (Top|Sides|Back|Binding)|Laptop Screen|Hoodie (Front|Back|Sleeve|Hood|Pocket|Cuff)|Lamp (Bulb|Shade)|Room (Floor [A-D]|Rug)|Cat (Body|Ear Inner|Eye)|TV Screen)/;
     // Parts merged under one name the site looks up.
     const JOIN = [[/^Room Wall/, 'Room Walls'], [/^Cat (Legs|Paw|Tail)/, 'Cat Limbs'], [/^Cat Ear [LR]$/, 'Cat Ears'], [/^Cat (Muzzle|Chin)/, 'Cat Muzzle']];
     // Parts the site paints a canvas texture onto: the only ones that need UVs.
-    const TEXTURED = /^(Guitar Top|Laptop Screen|Hoodie (Front|Back|Pocket|Sleeve [LR])|Room (Floor [A-D]|Rug)|Cat Body)$/;
+    const TEXTURED = /^(Guitar Top|Laptop Screen|Hoodie (Front|Back|Pocket|Sleeve [LR])|Room (Floor [A-D]|Rug)|Cat Body|TV Screen)$/;
     // The exported material data has no clearcoat, so it is put back by name.
     const COAT = [[/^Guitar (Top|Sides|Back|Binding|Pickguard|Neck|Head Face|Dot)/, 0.8], [/^DoorLeaf/, 0.25], [/^Desk (Top|Mug)/, 0.4], [/^Chair/, 0.2], [/^Rack/, 0.4], [/^Easel (Brush Handle|Paint)/, 0.6]];
 

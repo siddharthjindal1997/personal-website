@@ -6,6 +6,7 @@ import * as P from './props.js';
 import { ITEMS, POLAROIDS } from './content.js';
 import { pluck } from './audio.js';
 import { buildSpace } from './space.js';
+import { buildTV } from './tv.js';
 
 const X = 4.4, Z = 2.9;
 
@@ -120,6 +121,21 @@ export function buildRoom(renderer) {
   scene.add(P.shade(notes, false, true));
   register('notes', notes, { r: 1.4, az: -0.12, pol: 1.5 });
 
+  /* the sofa corner: favourite episodes on the TV, a note floating beside each (tv.js) */
+  const lounge = P.makeLounge();
+  lounge.wall.position.set(X, 0, 1.85); lounge.wall.rotation.y = -Math.PI / 2;
+  lounge.sofa.position.set(1.75, 0, 1.8); lounge.sofa.rotation.y = Math.PI / 2;
+  lounge.table.position.set(1.85, 0, 0.45); lounge.table.rotation.y = 0.5;
+  for (const o of [lounge.wall, lounge.sofa, lounge.table]) scene.add(P.shade(o));
+  const tv = buildTV(lounge.tv, lounge.screen);
+  scene.add(tv.holo);
+  register('tv', lounge.tv, { pose: tv.pose });
+  // sitting down anywhere in the corner, or touching the note, means the TV too
+  for (const o of [lounge.console, lounge.sofa, lounge.table, ...tv.pickables]) {
+    P.tag(o, { item: 'tv' });
+    o.traverse((m) => { if (m.isMesh) pickables.push(m); });
+  }
+
   const doors = {
     gigs: P.makeDoor('gigs', [[0, '#120a2e'], [0.6, '#5a1e5c'], [1, '#ff8a3d']]),
     places: P.makeDoor('places', [[0, '#3c4f96'], [0.55, '#d77d86'], [1, '#ffc58f']]),
@@ -148,6 +164,7 @@ export function buildRoom(renderer) {
   });
   const statics = [
     [-2.75, -1.3, 0.62], [-1.87, -1.24, 0.26], [2.8, -1.6, 0.42], [-1.4, -2.5, 0.34], [3.95, -2.55, 0.22], [0.8, -1.86, 0.32],
+    [1.75, 1.15, 0.5], [1.75, 1.8, 0.5], [1.75, 2.45, 0.5], [1.85, 0.45, 0.24],
   ];
   const DESK = [-0.15, 1.55, -Z, -2.12];
   const BR = 0.26;
@@ -233,9 +250,11 @@ export function buildRoom(renderer) {
     scene, items, pickables, doors, easel: paint,
     cats: space.cats, poke: space.poke, frameSpace: space.frame,
     stringHits: guitar.strings.map((s) => s.hit),
+    tv, sofa: lounge.sofa,
 
     focusPose(id) {
       const it = items[id], f = it.focus;
+      if (f.pose) return f.pose();
       box3.setFromObject(f.obj || it.obj).getCenter(tmpV);
       return { target: tmpV.clone(), r: f.r, az: f.az, pol: f.pol };
     },
@@ -248,6 +267,7 @@ export function buildRoom(renderer) {
     setUpright(id) { for (const b of bodies) b.upright = b.id === id; },
 
     action(id) {
+      if (id === 'tv') { tv.next(); return null; }
       if (id === 'hoodie') { hoodieState.goal = hoodieState.goal ? 0 : Math.PI; hoodieState.swing = 0.06; return null; }
       if (id === 'guitar') {
         const [, freqs] = CHORDS[guitarState.chord];
@@ -303,8 +323,9 @@ export function buildRoom(renderer) {
     },
     isHolding: () => !!grabbed,
 
-    update(dt, t) {
+    update(dt, t, camera) {
       physics(dt);
+      tv.update(dt, t, camera);
       for (const b of bodies) {
         b.lift += ((b.held ? 0.3 : 0) - b.lift) * (1 - Math.exp(-dt * 12));
         b.mesh.position.set(b.x, b.y + b.lift, b.z);

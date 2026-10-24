@@ -241,6 +241,17 @@ export function makeLamp() {
   return g;
 }
 
+/* ---------- the sofa corner: wall TV over a walnut console, sofa, side table ---------- */
+
+// The TV and console are built against their wall (z = 0, facing +z) and share its frame;
+// the sofa faces +z from its centre. tv.js paints the screen.
+export function makeLounge() {
+  const wall = new THREE.Group();
+  const tv = model('TV'), stand = model('Console');
+  wall.add(tv, stand);
+  return { wall, tv, console: stand, screen: tv.getObjectByName('TV_Screen'), sofa: model('Sofa'), table: model('SideTable') };
+}
+
 /* ---------- loose things ---------- */
 
 export function makePolaroid(tex) {

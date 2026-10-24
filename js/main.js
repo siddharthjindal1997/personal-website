@@ -18,7 +18,7 @@ const touch = matchMedia('(pointer: coarse)').matches;
 // Canvas textures are drawn once, so the fonts must be ready first.
 const models = loadModels();
 await Promise.race([
-  Promise.all(['600 44px Caveat', 'italic 50px "Instrument Serif"', '400 84px "Instrument Serif"', '700 70px Inter', '500 16px "JetBrains Mono"']
+  Promise.all(['600 44px Caveat', 'italic 50px "Instrument Serif"', '400 84px "Instrument Serif"', '700 70px Inter', '400 30px Inter', '500 16px "JetBrains Mono"']
     .map((f) => document.fonts.load(f))).catch(() => {}),
   wait(2500),
 ]);
@@ -57,11 +57,24 @@ for (const [id, it] of Object.entries(room.items)) {
   else dets.add(id, it.obj, meta.door ? `door → ${id}` : meta.label, meta.conf);
 }
 room.cats.forEach((c, i) => dets.add('cat:' + i, c.mesh, 'cat', 0.97));
+dets.add('sofa', room.sofa, 'sofa', 0.95);
 
 /* ---------- ui ---------- */
 
 const card = $('#card'), back = $('#back'), hint = $('#hint'), fade = $('#fade'), vbtn = $('#vision'), vhud = $('#vhud');
+const tvbar = $('#tvbar');
 const state = { mode: 'room', focus: null, world: null, worldId: null, busy: false, scene: room.scene };
+
+// In front of the TV the note floats in the room instead of the card; this bar steps
+// through the episodes and reads the note out to screen readers.
+room.tv.onChange = (ep, i, n) => {
+  tvbar.querySelector('.now').textContent = `${i + 1} / ${n} · ${ep.title}`;
+  tvbar.querySelector('.sr').textContent = `${ep.show}, ${ep.se}: ${ep.title}. ${ep.body.join(' ')}`;
+};
+function setTV(on) {
+  tvbar.hidden = !on;
+  if (on) room.tv.open(); else room.tv.close();
+}
 
 function showCard(c) {
   card.querySelector('.kicker').textContent = c.kicker || '';
@@ -110,7 +123,8 @@ function focus(id) {
   rig.ease = 2.8; rig.set(p); rig.limitAround(p);
   rig.parallaxAmt = 0; rig.drift = 0.008;
   room.setUpright(id.startsWith('polaroid:') ? id : null);
-  showCard(contentFor(id));
+  setTV(!!ITEMS[id]?.tv);
+  if (ITEMS[id]?.tv) hideCard(); else showCard(contentFor(id));
   dets.ping(id); dets.hover = null;
   back.hidden = false;
   document.body.classList.add('focused');
@@ -119,6 +133,7 @@ function focus(id) {
 function unfocus() {
   state.focus = null;
   room.setUpright(null);
+  setTV(false);
   const p = overview();
   rig.ease = 2.6; rig.set(p); roomLimits(p);
   rig.parallaxAmt = touch ? 0 : 0.05; rig.drift = 0.02;
@@ -130,7 +145,7 @@ function unfocus() {
 async function enter(id) {
   if (state.busy) return;
   state.busy = true;
-  state.focus = null; room.setUpright(null); hideCard();
+  state.focus = null; room.setUpright(null); hideCard(); setTV(false);
   room.doors[id].goal = 1;
   rig.limit({ az: [-Math.PI, Math.PI], pol: [0.1, 1.56], r: [0.5, 40] });
   rig.parallaxAmt = 0;
@@ -291,7 +306,10 @@ back.addEventListener('click', goBack);
 addEventListener('keydown', (e) => {
   if (e.key === 'Escape') goBack();
   if (e.key === 'v' && !e.metaKey && !e.ctrlKey) vbtn.click();
+  if (state.focus === 'tv' && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) room.tv.next(e.key === 'ArrowRight' ? 1 : -1);
 });
+$('#tvprev').addEventListener('click', () => room.tv.next(-1));
+$('#tvnext').addEventListener('click', () => room.tv.next(1));
 vbtn.addEventListener('click', () => {
   vision.on = !vision.on;
   vbtn.setAttribute('aria-pressed', vision.on);
@@ -328,7 +346,7 @@ function frame() {
   const dt = Math.min(clock.getDelta(), 1 / 20);
   t += dt;
   rig.update(dt, innerWidth, innerHeight, t);
-  if (state.mode === 'room') room.update(dt, t); else state.world.update(t, dt);
+  if (state.mode === 'room') room.update(dt, t, camera); else state.world.update(t, dt);
   vision.tick(dt);
   if (vision.active) vision.render(state.scene, camera, t);
   else { renderPass.scene = state.scene; composer.render(dt); }
