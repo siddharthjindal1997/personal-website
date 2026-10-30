@@ -125,7 +125,7 @@ export const SHOWS = [
   },
 ];
 
-// Lying on the rug. Swap `motif` for a real photo later (see README).
+// Lying on the floor. Swap `motif` for a real photo later (see README).
 export const POLAROIDS = [
   {
     id: 'jee', motif: 'omr', caption: 'JEE, 2015',

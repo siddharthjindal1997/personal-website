@@ -3,6 +3,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { InkPass } from './ink.js';
 import { setAniso } from './textures.js';
 import { loadModels } from './props.js';
 import { buildRoom } from './room.js';
@@ -42,10 +43,14 @@ const room = buildRoom(renderer);
 const builders = { gigs: buildGigs, places: buildPlaces };
 const worlds = {};
 
-const composer = new EffectComposer(renderer);
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: dpr < 1.5 ? 4 : 0 }));
 const renderPass = new RenderPass(room.scene, camera);
 composer.addPass(renderPass);
-composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.42, 0.55, 0.9));
+// the room is a drawn cel: inked outlines and colours that stay what they were painted
+const ink = new InkPass(room.scene, camera);
+ink.skip = room.inkSkip;
+composer.addPass(ink);
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.22, 0.4, 1.0));
 composer.addPass(new OutputPass());
 
 const vision = new MachineView(renderer);
@@ -108,7 +113,6 @@ function contentFor(id) {
 
 function overview() {
   const a = innerWidth / innerHeight, portrait = a < 1;
-  room.frameSpace(portrait);
   camera.fov = portrait ? 50 : 32;
   camera.aspect = a;
   const half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * a;
@@ -123,6 +127,7 @@ function focus(id) {
   rig.ease = 2.8; rig.set(p); rig.limitAround(p);
   rig.parallaxAmt = 0; rig.drift = 0.008;
   room.setUpright(id.startsWith('polaroid:') ? id : null);
+  room.showCity(id === 'window');
   setTV(!!ITEMS[id]?.tv);
   if (ITEMS[id]?.tv) hideCard(); else showCard(contentFor(id));
   dets.ping(id); dets.hover = null;
@@ -133,6 +138,7 @@ function focus(id) {
 function unfocus() {
   state.focus = null;
   room.setUpright(null);
+  room.showCity(false);
   setTV(false);
   const p = overview();
   rig.ease = 2.6; rig.set(p); roomLimits(p);
@@ -145,7 +151,7 @@ function unfocus() {
 async function enter(id) {
   if (state.busy) return;
   state.busy = true;
-  state.focus = null; room.setUpright(null); hideCard(); setTV(false);
+  state.focus = null; room.setUpright(null); room.showCity(false); hideCard(); setTV(false);
   room.doors[id].goal = 1;
   rig.limit({ az: [-Math.PI, Math.PI], pol: [0.1, 1.56], r: [0.5, 40] });
   rig.parallaxAmt = 0;
@@ -323,6 +329,7 @@ function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h, false);
   composer.setSize(w, h);
+  ink.setSize(Math.floor(w * dpr), Math.floor(h * dpr));
   vision.setSize(Math.floor(w * dpr), Math.floor(h * dpr), dpr);
   dets.resize(w, h, Math.min(devicePixelRatio, 2));
   const p = overview();
@@ -349,7 +356,12 @@ function frame() {
   if (state.mode === 'room') room.update(dt, t, camera); else state.world.update(t, dt);
   vision.tick(dt);
   if (vision.active) vision.render(state.scene, camera, t);
-  else { renderPass.scene = state.scene; composer.render(dt); }
+  else {
+    const inRoom = state.mode === 'room';
+    renderPass.scene = state.scene; ink.enabled = inRoom;
+    renderer.toneMapping = inRoom ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
+    composer.render(dt);
+  }
   vision.remember(camera);
   dets.spotsOn = state.mode === 'room' && !state.focus && !state.busy;
   const n = dets.draw(camera, dt, t, state.mode === 'room');

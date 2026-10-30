@@ -1,8 +1,9 @@
 # personal-website
 
-A BumpTop-style 3D room you look down into. Everything in it is from my life:
+A BumpTop-style 3D room you look down into: a cel-shaded garage workshop coming apart in a
+void full of broken-off suburbia and floating cats. Everything in it is from my life:
 the Yamaha F310, a half-finished painting, the laptop running maps.gov.sg, the
-Placecom hoodie, polaroids on the rug, a sofa in front of my favourite TV episodes, and two
+Placecom hoodie, polaroids on the cracked floor, a sofa in front of my favourite TV episodes, and two
 doors that open onto the outside.
 
 Plain static files: Three.js comes from a CDN through an import map, so there is no build step.
@@ -22,6 +23,10 @@ Deploy by pushing to any static host (GitHub Pages works as-is).
 | --- | --- |
 | `js/content.js` | **All the words.** Card copy, detection labels, polaroids, TV episodes, gigs, places. Edit this first. |
 | `js/room.js` | Room layout, lights, polaroid physics, guitar chords |
+| `js/garage.js` | The shell: boarded walls, cracked slab with holes, cabinets, bench, pegboard, glassware, tube lights, the torn corner |
+| `js/space.js` | Outside: the repeating broken neighbourhood, the bright cracks, rubble, and the cats' orbits |
+| `js/cat.js` | The cat, built in code in three poses; `textures.js#catSkin` paints its face and patches |
+| `js/kit.js`, `js/ink.js` | The cartoon look: stepped toon shading and the inked outlines pass |
 | `js/props.js` | Loads the models and layers on the moving parts (strings, canvas, screen, hoodie print) |
 | `models/room.glb` | The furniture and objects, modelled in Spline (see below) |
 | `js/textures.js` | Every surface, painted on a canvas at load time (no image files) |
@@ -42,11 +47,9 @@ Deploy by pushing to any static host (GitHub Pages works as-is).
 
 ## Editing the models
 
-The guitar and its stand, easel set, desk, chair, laptop, coat rack, hoodie, door frame,
-door leaf, window, lamp, the room shell (plank floor, walls, mouldings, rug), the cat, its
-space helmet, the portal's frame, and the sofa corner (sofa, side table, wall TV, media console)
-live in one Spline file. The cat is one model; each of
-the six coats is a canvas texture (`textures.js#catCoat`) painted onto its body. Each is a top-level group, laid out
+The guitar and its stand, easel set, the things on the desk, chair, laptop, coat rack, hoodie, door frame,
+door leaf, window, and the sofa corner (sofa, side table, wall TV, media console)
+live in one Spline file. The garage shell and the cats are built in code instead (`garage.js`, `cat.js`). Each model is a top-level group, laid out
 along x at 200 Spline units to the metre, and built in the same local frame `props.js` places
 it in. Parts the site retextures or drives (`Guitar Top`, `Laptop Screen`, `Hoodie Front`, `TV Screen`, …)
 are found by name, so keep those names.

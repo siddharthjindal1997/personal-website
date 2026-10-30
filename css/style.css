@@ -42,8 +42,8 @@ html, body {
   font: 400 clamp(30px, 3.4vw, 46px)/1 var(--serif);
   letter-spacing: -0.01em;
 }
-.id p { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
-.id h1, .id p { text-shadow: 0 1px 14px rgba(6, 4, 16, .65); }
+.id p { margin: 8px 0 0; font-size: 13px; color: #e6e2da; }
+.id h1, .id p { text-shadow: 0 0 3px #000, 0 1px 3px #000, 0 1px 14px rgba(0, 0, 0, .9); }
 
 .chip {
   display: inline-flex; align-items: center; gap: 8px;
@@ -119,6 +119,7 @@ html, body {
   transform: translateX(-50%);
   font: 400 11px var(--mono); color: var(--muted); letter-spacing: .03em;
   white-space: nowrap; pointer-events: none;
+  text-shadow: 0 0 3px #000, 0 1px 4px #000;
   transition: opacity .8s;
 }
 .hint-bar.gone, body.focused .hint-bar { opacity: 0; }

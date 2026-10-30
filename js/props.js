@@ -47,51 +47,6 @@ function dress(root, name, mat) {
   return mat;
 }
 
-// UVs in metres, projected along whichever axis each face looks down (walls tile plaster this way).
-// Positions in the GLB are quantised; `matrix` is the node transform that turns them back into metres.
-function boxUV(geo, matrix) {
-  const p = geo.attributes.position, n = geo.attributes.normal, uv = new Float32Array(p.count * 2), v = new THREE.Vector3();
-  for (let i = 0; i < p.count; i++) {
-    v.fromBufferAttribute(p, i).applyMatrix4(matrix);
-    const ax = Math.abs(n.getX(i)), ay = Math.abs(n.getY(i)), az = Math.abs(n.getZ(i));
-    const [a, b] = ax >= ay && ax >= az ? [v.z, v.y] : az >= ay ? [v.x, v.y] : [v.x, v.z];
-    uv[i * 2] = a; uv[i * 2 + 1] = b;
-  }
-  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-}
-
-/* ---------- the room shell: plank floor, walls, mouldings, rug ---------- */
-
-export function makeRoom() {
-  const g = model('Room');
-  const walls = g.getObjectByName('Room_Walls');
-  walls.traverse((m) => { if (m.isMesh) { m.geometry = m.geometry.clone(); m.updateMatrix(); boxUV(m.geometry, m.matrix); } });
-  dress(g, 'Room Walls', new THREE.MeshStandardMaterial({ map: T.plaster(), roughness: 0.92 }));
-  // each plank tone keeps its colour; the grain multiplies over it
-  const oak = T.oakGrain();
-  for (const k of 'ABCD') g.getObjectByName('Room_Floor_' + k).traverse((m) => { if (m.isMesh) { m.material = m.material.clone(); m.material.color.offsetHSL(0, 0, 0.06); m.material.map = oak; } });
-  dress(g, 'Room Rug', new THREE.MeshStandardMaterial({ map: T.rug(), roughness: 1 }));
-  return g;
-}
-
-/* ---------- cats in space ---------- */
-
-export function makeCat(coat, seed) {
-  const cat = model('Cat');
-  dress(cat, 'Cat Body', std(0xffffff, { map: T.catCoat({ ...coat, seed }), roughness: 0.9, side: THREE.DoubleSide }));
-  dress(cat, 'Cat Limbs', std(coat.limbs, { roughness: 0.9 }));
-  dress(cat, 'Cat Ears', std(coat.ears, { roughness: 0.9 }));
-  // a little self-light so the eyes still catch in deep space
-  const eye = new THREE.MeshPhysicalMaterial({ color: coat.eye, emissive: coat.eye, emissiveIntensity: 0.35, roughness: 0.08, clearcoat: 1 });
-  for (const n of ['Cat Eye L', 'Cat Eye R']) dress(cat, n, eye);
-  return cat;
-}
-
-export const makeHelmet = () => model('CatHelmet');
-
-// The stargate frame, in units of the swirl it surrounds (the swirl's edge sits at r = 0.4).
-export const makePortalFrame = () => model('Portal');
-
 /* ---------- Yamaha F310 ---------- */
 
 export function makeGuitar() {
@@ -158,11 +113,17 @@ export function makeEasel(paint) {
 
 /* ---------- desk, laptop, mug, plant, chair ---------- */
 
-export function makeDesk() {
+// The things off the desk, put down on the counter: the desk's own top and legs stay out of it.
+export function makeDesk(topY = 0.768) {
   const g = model('Desk');
+  const rise = topY - 0.768;
+  for (const part of [...g.children]) {
+    if (/^Desk_(Top|Stretcher|Glide)/.test(part.name)) g.remove(part);
+    else part.position.y += rise;
+  }
 
   const laptop = model('Laptop');
-  laptop.position.set(-0.05, 0.768, 0.04);
+  laptop.position.set(-0.05, topY, 0.04);
   laptop.rotation.y = -0.12;
   const screen = dress(laptop, 'Laptop Screen', new THREE.MeshBasicMaterial({ map: T.laptopScreen(), toneMapped: false }));
   screen.color.setScalar(0.92);
@@ -225,19 +186,11 @@ export function makeDoor(word, portalStops) {
 // inside the hole so no face shares a plane with the wall (shared planes flicker).
 export function makeWindow(w, h) {
   const g = model('Window');
-  const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0x9fb8d8, transparent: true, opacity: 0.06, roughness: 0.05, metalness: 0.2 }));
+  // the frame goes dark like the rest of the shed; the glass has taken a hit
+  g.traverse((m) => { if (m.isMesh) { m.material = m.material.clone(); m.material.color.set(0x3a3036); } });
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: T.brokenGlass(), transparent: true, depthWrite: false }));
+  glass.name = 'Window_Glass';
   glass.position.z = -0.01; g.add(glass);
-  return g;
-}
-
-/* ---------- floor lamp ---------- */
-
-export function makeLamp() {
-  const g = model('Lamp');
-  dress(g, 'Lamp Shade', new THREE.MeshStandardMaterial({ color: 0xf2e2c4, emissive: 0xffb866, emissiveIntensity: 0.18, roughness: 0.9, side: THREE.DoubleSide }));
-  dress(g, 'Lamp Bulb', new THREE.MeshBasicMaterial({ color: new THREE.Color(1.3, 1.05, 0.75), toneMapped: false }));
-  const light = new THREE.PointLight(0xffb36b, 3.2, 0, 2);
-  light.position.y = 1.6; g.add(light);
   return g;
 }
 
@@ -257,7 +210,13 @@ export function makeLounge() {
 export function makePolaroid(tex) {
   const paper = std(0xf3f0e8, { roughness: 0.8 });
   const face = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.45 });
-  return new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.006, 0.475), [paper, paper, face, paper, paper, paper]);
+  const card = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.006, 0.475), [paper, paper, face, paper, paper, paper]);
+  // Too thin for the ink pass to outline cleanly, so it brings its own line.
+  const line = new THREE.Mesh(new THREE.PlaneGeometry(0.41, 0.485), new THREE.MeshBasicMaterial({ color: 0x120d0e }));
+  line.rotation.x = -Math.PI / 2; line.position.y = -0.0035;
+  line.raycast = () => {};
+  card.add(line);
+  return card;
 }
 
 export function makeNote(tex) {

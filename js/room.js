@@ -1,11 +1,12 @@
-// The room: a BumpTop-style open box you look down into.
+// The room: a BumpTop-style open box you look down into, a garage coming apart in the void.
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import * as T from './textures.js';
 import * as P from './props.js';
 import { ITEMS, POLAROIDS } from './content.js';
 import { pluck } from './audio.js';
 import { buildSpace } from './space.js';
+import { buildGarage, TOP_Y } from './garage.js';
+import { toonify } from './kit.js';
 import { buildTV } from './tv.js';
 
 const X = 4.4, Z = 2.9;
@@ -20,34 +21,29 @@ const CHORDS = [
 
 export function buildRoom(renderer) {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0e0c0b);
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.environmentIntensity = 0.28;
-  pmrem.dispose();
+  scene.background = new THREE.Color(0x030304);
   const space = buildSpace(scene, renderer);
 
   /* lights */
-  scene.add(new THREE.HemisphereLight(0xffe7cc, 0x3a2a20, 0.55));
-  const key = new THREE.DirectionalLight(0xfff0dc, 1.7);
+  scene.add(new THREE.HemisphereLight(0xfbf6ea, 0x4a4648, 1.15));
+  const key = new THREE.DirectionalLight(0xfffbf0, 1.7);
   key.position.set(-5, 10, 7);
   key.target.position.set(0, 0, -0.5);
   key.castShadow = true;
   const mobile = matchMedia('(pointer: coarse)').matches;
   key.shadow.mapSize.setScalar(mobile ? 1024 : 2048);
   Object.assign(key.shadow.camera, { left: -7.5, right: 7.5, top: 7, bottom: -7, near: 1, far: 30 });
-  key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 4;
+  key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 1.5;
   scene.add(key, key.target);
-  const moon = new THREE.SpotLight(0x7f9cff, 9, 12, 0.6, 0.9, 1.5);
-  moon.position.set(0.8, 2.2, -4.5); moon.target.position.set(0.6, 0, -1);
-  scene.add(moon, moon.target);
+  // the tube lights, filling in the back wall
+  const tubes = new THREE.PointLight(0xeef8e8, 7, 0, 1.6);
+  tubes.position.set(-0.5, 2.5, -1.6);
+  scene.add(tubes);
 
-  /* shell: plank floor, walls with door and window openings, mouldings, rug (all modelled in Spline) */
-  const shell = P.shade(P.makeRoom());
-  shell.getObjectByName('Room_Rug').traverse((m) => { m.castShadow = false; });
-  scene.add(shell);
+  /* shell: walls, slab, cabinets, bench and clutter (garage.js) */
   const WIN = [0.7, 2.0, 1.9, 1.4];
   const DOOR_Z = 0.3;
+  const garage = buildGarage(scene, X, Z, DOOR_Z, WIN);
 
   /* things */
   const items = {};
@@ -74,7 +70,7 @@ export function buildRoom(renderer) {
   register('hoodie', hoodie, { r: 2.1, az: 0.12, pol: 1.47 });
   const hoodieState = { flip: 0, goal: 0, swing: 0 };
 
-  const desk = P.makeDesk();
+  const desk = P.makeDesk(TOP_Y);
   desk.root.position.set(0.7, 0, -2.48);
   scene.add(P.shade(desk.root));
   register('laptop', desk.laptop, { r: 1.15, az: -0.12, pol: 1.12 });
@@ -83,7 +79,8 @@ export function buildRoom(renderer) {
   win.position.set(WIN[0], WIN[1], -Z - 0.02);
   scene.add(P.shade(win, false, true));
   register('window', win, { r: 3.6, az: -0.08, pol: 1.45 });
-  // The city sits 3m behind the glass, faked with a parallax shader so nothing pokes out of the box.
+  // Through the glass is the void, but look at the window properly and there's Singapore:
+  // the city sits 3m behind it, faked with a parallax shader so nothing pokes out of the box.
   const view = new THREE.Mesh(new THREE.PlaneGeometry(WIN[2], WIN[3]), new THREE.ShaderMaterial({
     uniforms: { map: { value: T.skyline() }, uOrigin: { value: new THREE.Vector3(WIN[0], WIN[1], -Z - 0.1) }, uSize: { value: new THREE.Vector2(9, 5.6) }, uDepth: { value: 3 } },
     vertexShader: 'varying vec3 vW; void main() { vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
@@ -97,6 +94,7 @@ export function buildRoom(renderer) {
       }`,
   }));
   view.position.set(WIN[0], WIN[1], -Z - 0.1);
+  view.visible = false;
   scene.add(view);
 
   const guitar = P.makeGuitar();
@@ -104,10 +102,6 @@ export function buildRoom(renderer) {
   scene.add(P.shade(guitar.root));
   register('guitar', guitar.root, { obj: guitar.guitar, r: 2.3, az: -0.45, pol: 1.4 });
   const guitarState = { chord: 0 };
-
-  const lamp = P.makeLamp();
-  lamp.position.set(3.95, 0, -2.55);
-  scene.add(P.shade(lamp, true, false));
 
   const notes = new THREE.Group();
   [['learn to sell', '#f7e27a'], ['post-training, distillation', '#f9b8c4'], ['a RAG that holds up', '#bfe3c0'], ['build a real agent', '#f7e27a']]
@@ -117,7 +111,7 @@ export function buildRoom(renderer) {
       n.rotation.z = [0.06, -0.05, 0.03, -0.08][i];
       notes.add(n);
     });
-  notes.position.set(2.15, 2.25, -Z + 0.006);
+  notes.position.set(1.95, 2.3, -Z + 0.1);
   scene.add(P.shade(notes, false, true));
   register('notes', notes, { r: 1.4, az: -0.12, pol: 1.5 });
 
@@ -163,10 +157,9 @@ export function buildRoom(renderer) {
     };
   });
   const statics = [
-    [-2.75, -1.3, 0.62], [-1.87, -1.24, 0.26], [2.8, -1.6, 0.42], [-1.4, -2.5, 0.34], [3.95, -2.55, 0.22], [0.8, -1.86, 0.32],
-    [1.75, 1.15, 0.5], [1.75, 1.8, 0.5], [1.75, 2.45, 0.5], [1.85, 0.45, 0.24],
+    [-2.75, -1.3, 0.62], [-1.87, -1.24, 0.26], [2.8, -1.6, 0.42], [-1.4, -2.5, 0.34], [0.8, -1.86, 0.32],
+    [1.75, 1.15, 0.5], [1.75, 1.8, 0.5], [1.75, 2.45, 0.5], [1.85, 0.45, 0.24], ...garage.colliders,
   ];
-  const DESK = [-0.15, 1.55, -Z, -2.12];
   const BR = 0.26;
 
   function physics(dt) {
@@ -193,7 +186,14 @@ export function buildRoom(renderer) {
           if (vn < 0) { b.vx -= 1.5 * vn * nx; b.vz -= 1.5 * vn * nz; b.va += vn * 2; }
         }
       }
-      if (b.x > DESK[0] - BR && b.x < DESK[1] + BR && b.z < DESK[3] + BR) { b.z = DESK[3] + BR; b.vz = Math.abs(b.vz) * 0.5; }
+      for (const [x0, x1, z0, z1] of garage.blocks) {
+        if (b.x < x0 - BR || b.x > x1 + BR || b.z < z0 - BR || b.z > z1 + BR) continue;
+        // out by the nearest open side
+        const dl = b.x - (x0 - BR), dr = x1 + BR - b.x, df = z1 + BR - b.z;
+        if (df <= dl && df <= dr) { b.z = z1 + BR; b.vz = Math.abs(b.vz) * 0.5; }
+        else if (dl < dr) { b.x = x0 - BR; b.vx = -Math.abs(b.vx) * 0.5; }
+        else { b.x = x1 + BR; b.vx = Math.abs(b.vx) * 0.5; }
+      }
     }
     for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) {
       const p = bodies[i], q = bodies[j];
@@ -216,7 +216,7 @@ export function buildRoom(renderer) {
   const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   let grabbed = null, grabOff = { x: 0, z: 0 };
 
-  /* dust in the lamplight */
+  /* dust in the tube light */
   const N = 260, pos = new Float32Array(N * 3), seed = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     pos[i * 3] = (Math.random() - 0.5) * 9; pos[i * 3 + 1] = 0.3 + Math.random() * 2.8; pos[i * 3 + 2] = (Math.random() - 0.5) * 6.5;
@@ -243,12 +243,14 @@ export function buildRoom(renderer) {
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   }));
   scene.add(dust);
+  toonify(scene);
 
   const box3 = new THREE.Box3(), tmpV = new THREE.Vector3();
 
   return {
     scene, items, pickables, doors, easel: paint,
-    cats: space.cats, poke: space.poke, frameSpace: space.frame,
+    cats: space.cats, poke: space.poke,
+    inkSkip: [...space.skip, ...garage.skip, dust, tv.holo, win.getObjectByName('Window_Glass'), ...bodies.map((b) => b.mesh)],
     stringHits: guitar.strings.map((s) => s.hit),
     tv, sofa: lounge.sofa,
 
@@ -265,6 +267,7 @@ export function buildRoom(renderer) {
     },
 
     setUpright(id) { for (const b of bodies) b.upright = b.id === id; },
+    showCity(on) { view.visible = on; },
 
     action(id) {
       if (id === 'tv') { tv.next(); return null; }
@@ -326,6 +329,7 @@ export function buildRoom(renderer) {
     update(dt, t, camera) {
       physics(dt);
       tv.update(dt, t, camera);
+      garage.update(camera);
       for (const b of bodies) {
         b.lift += ((b.held ? 0.3 : 0) - b.lift) * (1 - Math.exp(-dt * 12));
         b.mesh.position.set(b.x, b.y + b.lift, b.z);

@@ -48,56 +48,6 @@ function grain(g, w, h, amt, r) {
 
 /* ---------- room surfaces ---------- */
 
-// Grain for the floor planks: light, so each plank's own tone shows through.
-export function oakGrain() {
-  const [c, g] = make(1024, 256); const r = rng(7);
-  g.fillStyle = '#f4ece0'; g.fillRect(0, 0, 1024, 256);
-  for (let k = 0; k < 90; k++) {
-    const y = r() * 256, a = 0.05 + r() * 0.14, w = 0.6 + r() * 2.2, f = 0.004 + r() * 0.01, ph = r() * 9;
-    g.strokeStyle = `rgba(92,52,22,${a})`; g.lineWidth = w;
-    g.beginPath();
-    for (let x = 0; x <= 1024; x += 16) g.lineTo(x, y + Math.sin(x * f + ph) * (2 + r() * 1.5));
-    g.stroke();
-  }
-  for (let k = 0; k < 6; k++) {
-    g.fillStyle = 'rgba(80,44,18,.12)';
-    g.beginPath(); g.ellipse(r() * 1024, r() * 256, 10 + r() * 14, 3 + r() * 3, 0, 0, TAU); g.fill();
-  }
-  grain(g, 1024, 256, 10, r);
-  return toTex(c, { repeat: [1, 1] });
-}
-
-export function plaster() {
-  const [c, g] = make(512, 512); const r = rng(3);
-  g.fillStyle = '#ebe3d6'; g.fillRect(0, 0, 512, 512);
-  for (let k = 0; k < 140; k++) {
-    g.fillStyle = `rgba(120,96,70,${0.012 + r() * 0.02})`;
-    g.beginPath(); g.ellipse(r() * 512, r() * 512, 10 + r() * 60, 6 + r() * 30, r() * 3, 0, TAU); g.fill();
-  }
-  grain(g, 512, 512, 9, r);
-  return toTex(c, { repeat: [0.4, 0.4] });
-}
-
-export function rug() {
-  const [c, g] = make(1024, 1024); const r = rng(11);
-  const C = 512;
-  const bands = [['#a84e36', 512], ['#e8dac0', 478], ['#2e3a55', 452], ['#e8dac0', 430], ['#a84e36', 318], ['#e8dac0', 288], ['#cf8547', 268], ['#2e3a55', 132], ['#e8dac0', 64]];
-  for (const [col, rad] of bands) { g.fillStyle = col; g.beginPath(); g.arc(C, C, rad, 0, TAU); g.fill(); }
-  g.fillStyle = '#2e3a55';
-  for (let i = 0; i < 40; i++) {
-    const a = (i / 40) * TAU;
-    g.save(); g.translate(C + Math.cos(a) * 374, C + Math.sin(a) * 374); g.rotate(a + Math.PI / 4);
-    g.fillRect(-13, -13, 26, 26); g.restore();
-  }
-  g.fillStyle = '#a84e36';
-  for (let i = 0; i < 16; i++) {
-    const a = (i / 16) * TAU;
-    g.beginPath(); g.ellipse(C + Math.cos(a) * 200, C + Math.sin(a) * 200, 34, 12, a, 0, TAU); g.fill();
-  }
-  grain(g, 1024, 1024, 28, r);
-  return toTex(c);
-}
-
 export function spruce() {
   const [c, g] = make(512, 1024); const r = rng(5);
   g.fillStyle = '#e4c28c'; g.fillRect(0, 0, 512, 1024);
@@ -562,48 +512,180 @@ export function label(name, years) {
 
 // Laid out on the cat's body: u runs round the body (0.25 = spine, 0.75 = belly),
 // v runs from the rump (0) to the nose (1).
-export function catCoat({ base, belly, stripe, point, patches = [], seed = 1 }) {
-  const W = 512, H = 512; const [c, g] = make(W, H); const r = rng(seed);
-  const Y = (v) => (1 - v) * H;
-  g.fillStyle = base; g.fillRect(0, 0, W, H);
-  if (belly) {
-    const gr = g.createLinearGradient(0.5 * W, 0, W, 0);
-    gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.3, belly); gr.addColorStop(0.7, belly); gr.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = gr; g.fillRect(0.5 * W, Y(0.86), 0.5 * W, Y(0.04) - Y(0.86));
-    // white chin and chest
-    g.fillRect(0.6 * W, Y(0.98), 0.3 * W, Y(0.62) - Y(0.98));
+
+/* ---------- the garage ---------- */
+
+const INK = '#16100f';
+
+// Tiled at 2m: dark painted boards, scuffed.
+export function garageWall() {
+  const [c, g] = make(1024, 1024); const r = rng(31);
+  g.fillStyle = '#4f464d'; g.fillRect(0, 0, 1024, 1024);
+  for (let k = 0; k < 60; k++) {
+    g.fillStyle = r() < 0.5 ? 'rgba(30,24,30,.1)' : 'rgba(120,108,118,.06)';
+    g.beginPath(); g.ellipse(r() * 1024, r() * 1024, 30 + r() * 140, 16 + r() * 70, r() * 3, 0, TAU); g.fill();
   }
-  for (const [col, n] of patches) {
-    g.fillStyle = col;
-    for (let i = 0; i < n; i++) {
-      const x = r() * W * 0.55, y = Y(0.05 + r() * 0.9), rx = 30 + r() * 70, ry = 25 + r() * 60;
-      g.beginPath(); g.ellipse(x, y, rx, ry, r() * 3, 0, TAU); g.fill();
+  g.strokeStyle = 'rgba(22,16,20,.75)'; g.lineWidth = 3;
+  for (let x = 0; x <= 1024; x += 256) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 1024); g.stroke(); }
+  return toTex(c, { repeat: [0.5, 0.5] });
+}
+
+// Tiled at 2m: the outside of the house.
+export function siding() {
+  const [c, g] = make(512, 512);
+  g.fillStyle = '#8a8690'; g.fillRect(0, 0, 512, 512);
+  g.strokeStyle = 'rgba(30,26,34,.55)'; g.lineWidth = 3;
+  for (let y = 0; y <= 512; y += 51.2) { g.beginPath(); g.moveTo(0, y); g.lineTo(512, y); g.stroke(); }
+  return toTex(c, { repeat: [0.5, 0.5] });
+}
+
+// The floor in one piece, cracks running out of the holes. Coordinates are metres: holes are
+// lists of [x, z] points, and the canvas covers x0..x0+w by z0..z0+d.
+export function concrete(holes, x0, z0, w, d) {
+  const W = 2048, H = Math.round((W * d) / w); const [c, g] = make(W, H); const r = rng(47);
+  const px = (x) => ((x - x0) / w) * W, py = (z) => ((z - z0) / d) * H, sc = W / w;
+  g.fillStyle = '#efe7d0'; g.fillRect(0, 0, W, H);
+  // fluorescent light falls off into grey towards the walls
+  const shade = (x1, y1, x2, y2, a) => {
+    const gr = g.createLinearGradient(x1, y1, x2, y2);
+    gr.addColorStop(0, `rgba(120,112,118,${a})`); gr.addColorStop(1, 'rgba(120,112,118,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  };
+  shade(0, 0, 0, H * 0.3, 0.55); shade(0, 0, W * 0.16, 0, 0.5); shade(W, 0, W * 0.84, 0, 0.5);
+  for (let k = 0; k < 40; k++) {
+    g.fillStyle = r() < 0.5 ? 'rgba(140,128,110,.08)' : 'rgba(255,250,235,.1)';
+    g.beginPath(); g.ellipse(r() * W, r() * H, 30 + r() * 150, 14 + r() * 60, r() * 3, 0, TAU); g.fill();
+  }
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const crack = (x, y, a, len, width, depth) => {
+    g.strokeStyle = INK; g.lineWidth = width;
+    g.beginPath(); g.moveTo(x, y);
+    const steps = 3 + ((r() * 4) | 0), seg = len / steps;
+    for (let i = 0; i < steps; i++) {
+      a += (r() - 0.5) * 1.1;
+      x += Math.cos(a) * seg; y += Math.sin(a) * seg;
+      g.lineTo(x, y);
+      if (depth > 0 && r() < 0.55) { g.stroke(); crack(x, y, a + (r() < 0.5 ? -1 : 1) * (0.5 + r() * 0.7), len * 0.6, width * 0.7, depth - 1); g.strokeStyle = INK; g.lineWidth = width; g.beginPath(); g.moveTo(x, y); }
     }
+    g.stroke();
+  };
+  for (const h of holes) {
+    const cx = h.reduce((s, p) => s + p[0], 0) / h.length, cz = h.reduce((s, p) => s + p[1], 0) / h.length;
+    h.forEach(([x, z], i) => { if (i % 3 === 0) crack(px(x), py(z), Math.atan2(z - cz, x - cx), sc * (0.5 + r() * 0.9), 3.4, 1); });
   }
-  if (stripe) {
-    // mackerel tabby: wavy bands across the back, fading down the flanks
-    g.strokeStyle = stripe; g.lineCap = 'round';
-    for (let v = 0.05; v < 0.78; v += 0.05 + r() * 0.025) {
-      g.lineWidth = 12 + r() * 9;
-      g.beginPath();
-      for (let u = 0.02; u <= 0.48; u += 0.02) {
-        const y = Y(v + Math.sin(u * 14 + v * 9) * 0.008 + (u - 0.25) * (u - 0.25) * 0.3);
-        g.globalAlpha = 0.9 * Math.max(0, 1 - Math.abs(u - 0.25) / 0.27);
-        g.lineTo(u * W, y);
+  // and a few loose ones across the slab
+  for (let k = 0; k < 3; k++) crack(r() * W, r() * H, r() * TAU, sc * (0.5 + r() * 0.6), 2.4, 0);
+  return toTex(c);
+}
+
+export function pegboard() {
+  const [c, g] = make(512, 512);
+  g.fillStyle = '#b7ae88'; g.fillRect(0, 0, 512, 512);
+  g.fillStyle = '#3c352c';
+  for (let y = 16; y < 512; y += 32) for (let x = 16; x < 512; x += 32) { g.beginPath(); g.arc(x, y, 4, 0, TAU); g.fill(); }
+  return toTex(c, { repeat: [1, 1] });
+}
+
+// Spider-web cracks on a transparent sheet, for the window glass.
+export function brokenGlass() {
+  const [c, g] = make(512, 512); const r = rng(61);
+  g.fillStyle = 'rgba(70,84,104,.16)'; g.fillRect(0, 0, 512, 512);
+  g.strokeStyle = 'rgba(205,220,235,.8)'; g.lineWidth = 1.6; g.lineCap = 'round';
+  const O = [356, 170];
+  for (let i = 0; i < 11; i++) {
+    let a = (i / 11) * TAU + r() * 0.3, x = O[0], y = O[1];
+    g.beginPath(); g.moveTo(x, y);
+    for (let k = 0; k < 4; k++) { const l = 30 + r() * 70; a += (r() - 0.5) * 0.5; x += Math.cos(a) * l; y += Math.sin(a) * l; g.lineTo(x, y); }
+    g.stroke();
+  }
+  return toTex(c);
+}
+
+export function stopSign() {
+  const [c, g] = make(256, 256);
+  g.fillStyle = '#3d2a2c'; g.fillRect(0, 0, 256, 256);
+  g.fillStyle = '#a8a29c'; g.font = '700 74px Inter, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('STOP', 128, 134);
+  return toTex(c);
+}
+
+/* ---------- the cat's skin ---------- */
+
+// One atlas: awake head, sleeping head, body, and a strip of flat colours along the bottom right.
+const SKIN = 2048;
+const swatch = (i) => [(1024 + 64 + i * 128) / SKIN, 64 / SKIN];
+export const CAT_UV = {
+  awake: [0, 0.5, 0.5, 1], asleep: [0, 0, 0.5, 0.5], body: [0.5, 0.5, 1, 1],
+  cream: swatch(0), ear: swatch(1), collar: swatch(2), gold: swatch(3), ink: swatch(4), tailTip: swatch(5),
+  tail: [0.5, 0.25, 1, 0.3],
+};
+
+export function catSkin() {
+  const [c, g] = make(SKIN, SKIN); const r = rng(83);
+  const CREAM = '#fdf3e8', SALMON = '#f2a698', S = 1024;
+  g.fillStyle = CREAM; g.fillRect(0, 0, SKIN, SKIN);
+
+  // A soft-cornered splodge of colour.
+  const splodge = (x, y, rx, ry, col) => {
+    g.fillStyle = col; g.beginPath();
+    const n = 12, off = Array.from({ length: n }, () => 0.82 + r() * 0.34);
+    const pt = (i) => { const a = (i / n) * TAU, k = off[i % n]; return [x + Math.cos(a) * rx * k, y + Math.sin(a) * ry * k]; };
+    let [ax, ay] = pt(0), [bx, by] = pt(1);
+    g.moveTo((ax + bx) / 2, (ay + by) / 2);
+    for (let i = 1; i <= n; i++) { [ax, ay] = pt(i); [bx, by] = pt(i + 1); g.quadraticCurveTo(ax, ay, (ax + bx) / 2, (ay + by) / 2); }
+    g.fill();
+  };
+
+  // Faces sit at u = 0.25 of each head, the sphere's local +z, so x = S/4.
+  const face = (oy, awake) => {
+    g.save(); g.beginPath(); g.rect(0, oy, S, S); g.clip();
+    g.translate(0, oy);
+    // a sphere's UVs cover twice the angle across as up and down: draw tall to land round
+    g.translate(0, S / 2); g.scale(1, 1.9); g.translate(0, -S / 2);
+    const fx = S / 4, ey = S / 2 - 6;
+    // the salmon patches: over one eye, across the far cheek, round the back of the skull
+    splodge(fx - 90, ey - 112, 96, 66, SALMON);
+    splodge(fx + 128, ey + 74, 62, 46, SALMON);
+    splodge(fx + 380, ey - 60, 110, 90, SALMON);
+    splodge(fx + 650, ey + 60, 90, 80, SALMON);
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    for (const s of [-1, 1]) {
+      const ex = fx + s * 92;
+      if (awake) {
+        g.fillStyle = INK; g.beginPath(); g.ellipse(ex, ey, 56, 62, 0, 0, TAU); g.fill();
+        g.fillStyle = '#a7cf5c'; g.beginPath(); g.ellipse(ex, ey, 51, 57, 0, 0, TAU); g.fill();
+        g.fillStyle = '#dcef8c'; g.beginPath(); g.ellipse(ex, ey + 5, 43, 47, 0, 0, TAU); g.fill();
+        g.fillStyle = INK; g.beginPath(); g.ellipse(ex, ey + 2, 7.5, 36, 0, 0, TAU); g.fill();
+        g.fillStyle = '#c9e476'; g.beginPath(); g.ellipse(ex, ey - 42, 44, 15, 0, 0, TAU); g.fill();
+        g.strokeStyle = INK; g.lineWidth = 5; g.beginPath(); g.ellipse(ex, ey - 30, 50, 26, 0, Math.PI * 1.08, Math.PI * 1.92); g.stroke();
+      } else {
+        g.strokeStyle = INK; g.lineWidth = 7;
+        g.beginPath(); g.moveTo(ex - 44, ey + 2); g.quadraticCurveTo(ex, ey + 30, ex + 44, ey + 2); g.stroke();
+        g.lineWidth = 4;
+        for (const t of [-30, 0, 30]) { g.beginPath(); g.moveTo(ex + t, ey + 18 - Math.abs(t) * 0.35); g.lineTo(ex + t * 1.2, ey + 32 - Math.abs(t) * 0.35); g.stroke(); }
       }
-      g.stroke();
     }
-    // the "M" lines on the forehead
-    g.globalAlpha = 0.7; g.lineWidth = 5;
-    for (const du of [-0.03, 0, 0.03]) { g.beginPath(); g.moveTo((0.25 + du) * W, Y(0.86)); g.lineTo((0.25 + du * 1.4) * W, Y(0.93)); g.stroke(); }
-    g.globalAlpha = 1;
-  }
-  if (point) {
-    // colour-point: mask darkens towards the nose
-    const gr = g.createLinearGradient(0, Y(0.8), 0, Y(1));
-    gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, point); gr.addColorStop(1, point);
-    g.fillStyle = gr; g.fillRect(0, 0, W, Y(0.8));
-  }
-  grain(g, W, H, 22, r);
+    // nose and mouth
+    g.fillStyle = '#e8838a'; g.beginPath(); g.moveTo(fx - 11, ey + 62); g.lineTo(fx + 11, ey + 62); g.lineTo(fx, ey + 74); g.closePath(); g.fill();
+    g.strokeStyle = INK; g.lineWidth = 4.5;
+    g.beginPath(); g.moveTo(fx - 26, ey + 84); g.quadraticCurveTo(fx - 13, ey + 94, fx, ey + 76); g.quadraticCurveTo(fx + 13, ey + 94, fx + 26, ey + 84); g.stroke();
+    g.restore();
+  };
+  face(0, true);
+  face(S, false);
+
+  // the body: round splodges wrapped around the back and flanks
+  g.save(); g.beginPath(); g.rect(S, 0, S, S); g.clip();
+  for (const [u, v, rx, ry] of [[0.16, 0.34, 150, 104], [0.42, 0.26, 118, 90], [0.71, 0.3, 140, 96], [0.92, 0.56, 80, 60], [0.31, 0.62, 76, 54], [0.58, 0.58, 70, 50]]) splodge(S + u * S, v * S, rx, ry, SALMON);
+  g.restore();
+
+  // flat colours, bottom right
+  const sw = ['#fdf3e8', '#dca6d4', '#d83a72', '#e6b838', INK, SALMON];
+  sw.forEach((col, i) => { g.fillStyle = col; g.fillRect(S + i * 128, SKIN - 128, 128, 128); });
+  // the tail strip: bands thickening towards the tip
+  const ty = SKIN * 0.7, th = SKIN * 0.05;
+  g.fillStyle = CREAM; g.fillRect(S, ty, S, th);
+  g.fillStyle = SALMON;
+  for (const [a, b] of [[0.3, 0.42], [0.62, 0.72], [0.84, 1]]) g.fillRect(S + a * S, ty, (b - a) * S, th);
   return toTex(c);
 }
