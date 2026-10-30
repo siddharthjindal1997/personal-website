@@ -43,7 +43,7 @@ export function buildRoom(renderer) {
   /* shell: walls, slab, cabinets, bench and clutter (garage.js) */
   const WIN = [0.7, 2.0, 1.9, 1.4];
   const DOOR_Z = 0.3;
-  const garage = buildGarage(scene, X, Z, DOOR_Z, WIN);
+  const garage = buildGarage(scene, X, Z);
 
   /* things */
   const items = {};

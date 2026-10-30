@@ -23,12 +23,12 @@ Deploy by pushing to any static host (GitHub Pages works as-is).
 | --- | --- |
 | `js/content.js` | **All the words.** Card copy, detection labels, polaroids, TV episodes, gigs, places. Edit this first. |
 | `js/room.js` | Room layout, lights, polaroid physics, guitar chords |
-| `js/garage.js` | The shell: boarded walls, cracked slab with holes, cabinets, bench, pegboard, glassware, tube lights, the torn corner |
-| `js/space.js` | Outside: the repeating broken neighbourhood, the bright cracks, rubble, and the cats' orbits |
-| `js/cat.js` | The cat, built in code in three poses; `textures.js#catSkin` paints its face and patches |
+| `js/garage.js` | Dresses the modelled shell (boards, siding, cracked slab, pegboard) and knows where the holes and cabinets are |
+| `js/space.js` | Outside: lays out the repeating broken neighbourhood, the bright cracks, rubble, and the cats' orbits |
+| `js/cat.js` | The cat in three poses; `textures.js#catSkin` paints its face and patches |
 | `js/kit.js`, `js/ink.js` | The cartoon look: stepped toon shading and the inked outlines pass |
 | `js/props.js` | Loads the models and layers on the moving parts (strings, canvas, screen, hoodie print) |
-| `models/room.glb` | The furniture and objects, modelled in Spline (see below) |
+| `models/room.glb` | Everything modelled in Spline: furniture, garage, cats, the neighbourhood (see below) |
 | `js/textures.js` | Every surface, painted on a canvas at load time (no image files) |
 | `js/vision.js` | Machine view (Sobel edges + optical flow) and the detection boxes |
 | `js/tv.js` | The sofa corner's TV: each episode painted on the screen, and the AR note floating beside it |
@@ -48,11 +48,15 @@ Deploy by pushing to any static host (GitHub Pages works as-is).
 ## Editing the models
 
 The guitar and its stand, easel set, the things on the desk, chair, laptop, coat rack, hoodie, door frame,
-door leaf, window, and the sofa corner (sofa, side table, wall TV, media console)
-live in one Spline file. The garage shell and the cats are built in code instead (`garage.js`, `cat.js`). Each model is a top-level group, laid out
+door leaf, window, the sofa corner (sofa, side table, wall TV, media console), the garage, the cats
+(each pose with a `Lo` twin for the crowd), the neighbourhood block and the pieces adrift
+live in one Spline file. Each model is a top-level group, laid out
 along x at 200 Spline units to the metre, and built in the same local frame `props.js` places
 it in. Parts the site retextures or drives (`Guitar Top`, `Laptop Screen`, `Hoodie Front`, `TV Screen`, …)
-are found by name, so keep those names.
+are found by name, so keep those names. The garage, block and adrift parts merge into one mesh
+with their colours in the vertices, so a colour change in Spline carries straight through. The cats
+merge too, but take their colour from the skin atlas: `tools/spline-to-glb.html#CAT_PART` says which
+patch each part uses. Glowing parts live in their own groups (`GarageTubes`, `BlockGlow`).
 
 To ship a change:
 
@@ -62,11 +66,12 @@ To ship a change:
 3. Compress it into the site:
 
    ```sh
-   npx gltfpack -i ~/Downloads/room.glb -o models/room.glb -cc -kn -km -kv -vtf
+   npx gltfpack -i ~/Downloads/room.glb -o models/room.glb -cc -kn -km -kv -vtf -vp 16
    ```
 
    `-kn -km` keep the part names and materials apart, `-kv -vtf` keep plain UVs for the
-   canvas textures.
+   canvas textures, and `-vp 16` keeps the small parts sharp in a file that also holds a
+   33 m wide neighbourhood.
 
 ## Using real photos
 

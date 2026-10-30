@@ -35,6 +35,7 @@
     import SplineLoader from '@splinetool/loader';
     import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
     import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+    import { CAT_UV } from '../js/textures.js';
 
     // Spline units per metre, and where each model's origin sits along x in the Spline file.
     const S = 200;
@@ -42,15 +43,25 @@
       Guitar: 0, GuitarStand: 400, Easel: 1000, Desk: 2000, Chair: 2600, Laptop: 3200,
       Rack: 3800, Hoodie: 4400, DoorFrame: 5000, DoorLeaf: 5600, Window: 6400,
       Sofa: 13000, TV: 13800, Console: 14600, SideTable: 15300,
+      CatLeap: 16000, CatDrift: 16600, CatSleep: 17200, CatLeapLo: 17800, CatDriftLo: 18400, CatSleepLo: 19000,
+      Garage: 21000, GarageRoof: 21000, GarageTubes: 21000, GarageLid: 21000,
+      Block: 26000, BlockGlow: 26000,
+      AdriftSign: 30000, AdriftTable: 30800, AdriftChair: 31400, AdriftTree: 32000, AdriftRoof: 32800, AdriftPave: 33600,
     };
     // Parts the site drives, recolours or retextures by name: never merged away.
-    const KEEP = /^(Guitar (Top|Sides|Back|Binding)|Laptop Screen|Hoodie (Front|Back|Sleeve|Hood|Pocket|Cuff)|TV Screen)/;
+    const KEEP = /^(Guitar (Top|Sides|Back|Binding)|Laptop Screen|Hoodie (Front|Back|Sleeve|Hood|Pocket|Cuff)|TV Screen|Garage (Slab|Peg)$|AdriftSign Face)/;
     // Parts merged under one name the site looks up.
-    const JOIN = [];
+    const JOIN = [[/^Garage Boards/, 'Garage Boards'], [/^Garage Siding/, 'Garage Siding']];
     // Parts the site paints a canvas texture onto: the only ones that need UVs.
-    const TEXTURED = /^(Guitar Top|Laptop Screen|Hoodie (Front|Back|Pocket|Sleeve [LR])|TV Screen)$/;
+    const TEXTURED = /^(Guitar Top|Laptop Screen|Hoodie (Front|Back|Pocket|Sleeve [LR])|TV Screen|Garage (Boards|Siding) (Back|Left|Right)|Garage (Slab|Peg)|AdriftSign Face)$/;
     // The exported material data has no clearcoat, so it is put back by name.
     const COAT = [[/^Guitar (Top|Sides|Back|Binding|Pickguard|Neck|Head Face|Dot)/, 0.8], [/^DoorLeaf/, 0.25], [/^Desk (Top|Mug)/, 0.4], [/^Chair/, 0.2], [/^Rack/, 0.4], [/^Easel (Brush Handle|Paint)/, 0.6]];
+
+    // Lots of little coloured parts: merged into one mesh, each part's colour written into its vertices.
+    const FLAT = /^(Garage|Block|Adrift)/;
+    // The cats: one mesh each, with every part's UVs squeezed into its patch of the skin atlas.
+    const CAT = /^Cat(Leap|Drift|Sleep)/;
+    const CAT_PART = [[/Body$/, 'body'], [/EarInner/, 'ear'], [/Ear /, 'cream'], [/Whisker/, 'ink'], [/Collar/, 'collar'], [/Bell/, 'gold'], [/Leg/, 'cream'], [/TailTip/, 'tailTip'], [/Tail$/, 'tail']];
 
     const log = (s) => { document.querySelector('#log').textContent += s + '\n'; };
     const lin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
@@ -89,6 +100,21 @@
       return g;
     }
 
+    function paint(g, c) {
+      const a = new Float32Array(g.attributes.position.count * 3);
+      for (let i = 0; i < a.length; i += 3) { a[i] = c.r; a[i + 1] = c.g; a[i + 2] = c.b; }
+      g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+    }
+
+    function skin(g, part, model) {
+      const key = (CAT_PART.find(([re]) => re.test(part)) || [0, model.startsWith('CatSleep') ? 'asleep' : 'awake'])[1];
+      const rect = CAT_UV[key], uv = g.attributes.uv;
+      for (let i = 0; i < uv.count; i++) {
+        if (rect.length === 2) uv.setXY(i, rect[0], rect[1]);
+        else uv.setXY(i, rect[0] + uv.getX(i) * (rect[2] - rect[0]), rect[1] + uv.getY(i) * (rect[3] - rect[1]));
+      }
+    }
+
     function convert(scene) {
       scene.updateMatrixWorld(true);
       const out = new THREE.Scene();
@@ -96,14 +122,22 @@
         const group = scene.getObjectByName(name);
         if (!group) { log(`missing: ${name}`); continue; }
         const toLocal = new THREE.Matrix4().makeScale(1 / S, 1 / S, 1 / S).multiply(new THREE.Matrix4().makeTranslation(-ax, 0, 0));
-        const buckets = new Map(), node = new THREE.Group();
+        const buckets = new Map(), node = new THREE.Group(), flat = FLAT.test(name), cat = CAT.test(name);
         node.name = name;
         group.traverse((o) => {
           if (!o.isMesh || !o.visible || !o.geometry?.attributes?.position) return;
-          const mat = material(o.material, o.name);
-          const geo = bake(o.geometry, toLocal.clone().multiply(o.matrixWorld), TEXTURED.test(o.name));
+          let mat = material(o.material, o.name);
+          const geo = bake(o.geometry, toLocal.clone().multiply(o.matrixWorld), cat || TEXTURED.test(o.name));
           const joined = JOIN.find(([re]) => re.test(o.name));
-          const key = joined ? 'keep:' + joined[1] : KEEP.test(o.name) ? 'keep:' + o.name : mat.name + (mat.isMeshPhysicalMaterial ? 'p' : '');
+          let key = joined ? 'keep:' + joined[1] : KEEP.test(o.name) ? 'keep:' + o.name : mat.name + (mat.isMeshPhysicalMaterial ? 'p' : '');
+          if (cat) {
+            skin(geo, o.name, name);
+            key = `keep:${name} Mesh`;
+          } else if (flat && !key.startsWith('keep:')) {
+            paint(geo, mat.color);
+            mat = new THREE.MeshStandardMaterial({ name: `${name} Flat`, roughness: 1 });
+            key = `keep:${name} Flat`;
+          }
           if (!buckets.has(key)) buckets.set(key, { mat, geos: [], names: [] });
           const b = buckets.get(key); b.geos.push(geo); b.names.push(o.name);
         });

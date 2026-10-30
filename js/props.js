@@ -40,6 +40,23 @@ export async function loadModels(url = 'models/room.glb') {
 // Clones share geometry and materials with the loaded model.
 const model = (name) => MODELS[name].clone();
 
+// One baked part as a geometry in its model's frame, for the garage, block and cats that
+// bring their own materials. Compression moves positions into a node transform, so that's
+// undone here: instancing and flipping both want the plain numbers.
+const BAKED = new Map();
+export function baked(name, part = `${name} Flat`) {
+  if (BAKED.has(part)) return BAKED.get(part);
+  let mesh;
+  MODELS[name].getObjectByName(part.replaceAll(' ', '_')).traverse((m) => { if (m.isMesh) mesh = m; });
+  mesh.updateWorldMatrix(true, false);
+  const src = mesh.geometry, g = src.clone(), p = src.attributes.position, pos = new Float32Array(p.count * 3), v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) v.fromBufferAttribute(p, i).applyMatrix4(mesh.matrixWorld).toArray(pos, i * 3);
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.computeBoundingBox(); g.computeBoundingSphere();
+  BAKED.set(part, g);
+  return g;
+}
+
 // Named parts are wrapper nodes around the actual mesh; swap the material on all of them.
 // (GLTFLoader turns the spaces in Spline's names into underscores.)
 function dress(root, name, mat) {
